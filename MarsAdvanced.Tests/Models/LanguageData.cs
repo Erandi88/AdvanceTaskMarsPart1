@@ -8,6 +8,8 @@ namespace MarsAdvanced.Tests.Models
 {
    public class LanguageData
     {
+        public string Language { get; set; } = string.Empty;
+
         public string Level { get; set; } = string.Empty;
     }
 }
