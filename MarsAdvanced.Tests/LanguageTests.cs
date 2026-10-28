@@ -1,8 +1,9 @@
-﻿using MarsAdvanced.Tests.Pages;
+﻿using MarsAdvanced.Tests.Helpers;
+using MarsAdvanced.Tests.Models;
+using MarsAdvanced.Tests.Pages;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using MarsAdvanced.Tests.Helpers;
 
 namespace MarsAdvanced.Tests;
 
@@ -45,8 +46,26 @@ public class LanguageTests
             ?? throw new InvalidOperationException("Language page was not created.");
 
         string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
-        string level = "Basic";
+        //string level = "Basic";
+
+        string filePath = Path.Combine(
+                                TestContext.CurrentContext.TestDirectory,
+                                "TestData",
+                                "AddLanguageWithValidDetails.json"
+                                );
+
+        LanguageData testData = JsonReader.Read<LanguageData>(filePath);
+
+        Assert.That(
+            testData.Level,
+            Is.Not.Null.And.Not.Empty,
+            "The language level must be provided in the JSON file."
+        );
+
+        string level = testData.Level;
+
         int countBefore = page.GetLanguageRowCount();
+        Console.WriteLine("Row count BEFORE : " + countBefore);
 
         Assert.That(
             countBefore,
@@ -69,7 +88,7 @@ public class LanguageTests
                 Is.True,
                 "The new language and its level should appear."
             );
-
+            Console.WriteLine("Row count AFTER : " + page.GetLanguageRowCount());
             Assert.That(
                 page.WaitForLanguageRowCount(countBefore + 1),
                 Is.True,
@@ -92,7 +111,31 @@ public class LanguageTests
         string originalLanguage = "AutoA" + suffix;
         string updatedLanguage = "AutoB" + suffix;
 
+        string filePath = Path.Combine(
+                            TestContext.CurrentContext.TestDirectory,
+                            "TestData",
+                            "EditLanguageWithValidDetails.json"
+                        );
+
+        EditLanguageData testData =
+            JsonReader.Read<EditLanguageData>(filePath);
+
+        Assert.That(
+            testData.OriginalLevel,
+            Is.Not.Null.And.Not.Empty,
+            "The original level must be provided."
+        );
+
+        Assert.That(
+            testData.UpdatedLevel,
+            Is.Not.Null.And.Not.Empty,
+            "The updated level must be provided."
+        );
+
+       
         int countBefore = page.GetLanguageRowCount();
+
+        Console.WriteLine("Row count BEFORE Edit : "+countBefore);
 
         Assert.That(
             countBefore,
@@ -109,17 +152,17 @@ public class LanguageTests
             page.AddLanguage(originalLanguage, "Basic");
 
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(originalLanguage, "Basic"),
+                page.IsLanguageAndLevelDisplayed(originalLanguage, testData.OriginalLevel),
                 Is.True,
                 "The original language should exist before editing."
             );
 
             // Act: edit the record.
-            page.EditLanguage(originalLanguage, updatedLanguage, "Fluent");
+            page.EditLanguage(originalLanguage, updatedLanguage, testData.UpdatedLevel);
 
             // Assert: the updated row replaces the original.
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(updatedLanguage, "Fluent"),
+                page.IsLanguageAndLevelDisplayed(updatedLanguage, testData.UpdatedLevel),
                 Is.True,
                 "The updated language and level should appear."
             );
@@ -129,7 +172,7 @@ public class LanguageTests
                 Is.True,
                 "The original language should no longer appear."
             );
-
+            Console.WriteLine("Row count AFTER Edit : " + page.GetLanguageRowCount());
             Assert.That(
                 page.GetLanguageRowCount(),
                 Is.EqualTo(countBefore + 1),
@@ -151,11 +194,27 @@ public class LanguageTests
            ?? throw new InvalidOperationException("Language page was not created.");
 
         string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
-        string level = "Basic";
+        //string level = "Basic";
+
+        string filePath = Path.Combine(
+                            TestContext.CurrentContext.TestDirectory,
+                            "TestData",
+                            "DeleteLanguageWithValidDetails.json"
+                        );
+
+        LanguageData testData = JsonReader.Read<LanguageData>(filePath);
+
+        Assert.That(
+            testData.Level,
+            Is.Not.Null.And.Not.Empty,
+            "The language level must be provided."
+        );
+
+        string level = testData.Level;
 
         int countBefore = page.GetLanguageRowCount();
 
-        Console.WriteLine("Row count BEFORE : " + countBefore);
+        Console.WriteLine("Row count delete BEFORE : " + countBefore);
 
         Assert.That(
             countBefore,
@@ -190,7 +249,7 @@ public class LanguageTests
                 "The deleted language should no longer appear."
             );
 
-            Console.WriteLine("Row count AFTER : " + page.GetLanguageRowCount());
+            Console.WriteLine("Row count Delete AFTER : " + page.GetLanguageRowCount());
 
             Assert.That(
                 page.WaitForLanguageRowCount(countBefore),
