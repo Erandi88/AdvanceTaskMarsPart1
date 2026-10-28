@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using MarsAdvanced.Tests.Helpers;
 
 namespace MarsAdvanced.Tests;
 
@@ -20,7 +21,7 @@ public class LanguageTests
         string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
         string level = "Basic";
 
-        using IWebDriver driver = new ChromeDriver();
+        using IWebDriver driver = CommonDriver.CreateChromeDriver();
         driver.Navigate().GoToUrl("http://localhost:5003/Home");
 
         var loginPage = new LoginPage(driver);
@@ -91,7 +92,7 @@ public class LanguageTests
         string originalLanguage = "AutoA" + suffix;
         string updatedLanguage = "AutoB" + suffix;
 
-        using IWebDriver driver = new ChromeDriver();
+        using IWebDriver driver = CommonDriver.CreateChromeDriver();
         driver.Navigate().GoToUrl("http://localhost:5003/Home");
 
         var loginPage = new LoginPage(driver);
@@ -168,7 +169,7 @@ public class LanguageTests
         string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
         string level = "Basic";
 
-        using IWebDriver driver = new ChromeDriver();
+        using IWebDriver driver = CommonDriver.CreateChromeDriver();
         driver.Navigate().GoToUrl("http://localhost:5003/Home");
 
         var loginPage = new LoginPage(driver);

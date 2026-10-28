@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using MarsAdvanced.Tests.Helpers;
 
 namespace MarsAdvanced.Tests;
 
@@ -16,7 +17,7 @@ public class LoginTests
         Assert.That(email, Is.Not.Null.And.Not.Empty, "MARS_EMAIL is not set.");
         Assert.That(password, Is.Not.Null.And.Not.Empty, "MARS_PASSWORD is not set.");
 
-        using IWebDriver driver = new ChromeDriver();
+        using IWebDriver driver = CommonDriver.CreateChromeDriver();
 
         driver.Navigate().GoToUrl("http://localhost:5003/Home");
 
