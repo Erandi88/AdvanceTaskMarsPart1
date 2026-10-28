@@ -8,8 +8,12 @@ namespace MarsAdvanced.Tests;
 
 public class LanguageTests
 {
-    [Test]
-    public void AddLanguageWithValidDetails()
+    //These fields will let the setup, tests and teardown access the same browser and page object for each test.
+    private IWebDriver? driver;
+    private LanguagePage? languagePage;
+
+    [SetUp]
+    public void SetUp()
     {
         string? email = Environment.GetEnvironmentVariable("MARS_EMAIL");
         string? password = Environment.GetEnvironmentVariable("MARS_PASSWORD");
@@ -17,11 +21,7 @@ public class LanguageTests
         Assert.That(email, Is.Not.Null.And.Not.Empty, "MARS_EMAIL is not set.");
         Assert.That(password, Is.Not.Null.And.Not.Empty, "MARS_PASSWORD is not set.");
 
-        // A different name for each run helps us identify our test record.
-        string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
-        string level = "Basic";
-
-        using IWebDriver driver = CommonDriver.CreateChromeDriver();
+        driver = CommonDriver.CreateChromeDriver();
         driver.Navigate().GoToUrl("http://localhost:5003/Home");
 
         var loginPage = new LoginPage(driver);
@@ -33,10 +33,20 @@ public class LanguageTests
             "Login should succeed before testing languages."
         );
 
-        var languagePage = new LanguagePage(driver);
-        int countBefore = languagePage.GetLanguageRowCount();
-        Console.WriteLine("Count BEFORE : " + countBefore);
-        //TestContext.Progress.WriteLine($"Language rows before: {countBefore}");
+        languagePage = new LanguagePage(driver);
+    }
+
+    
+
+    [Test]
+    public void AddLanguageWithValidDetails()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+
+        string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
+        string level = "Basic";
+        int countBefore = page.GetLanguageRowCount();
 
         Assert.That(
             countBefore,
@@ -45,67 +55,44 @@ public class LanguageTests
         );
 
         Assert.That(
-            languagePage.IsLanguageDisplayed(language),
+            page.IsLanguageDisplayed(language),
             Is.False,
             "The test language must not already exist."
         );
 
         try
         {
-            languagePage.AddLanguage(language, level);
+            page.AddLanguage(language, level);
 
             Assert.That(
-                languagePage.IsLanguageAndLevelDisplayed(language, level),
+                page.IsLanguageAndLevelDisplayed(language, level),
                 Is.True,
                 "The new language and its level should appear."
             );
 
-            /*TestContext.Progress.WriteLine(
-                $"Language rows after adding: {languagePage.GetLanguageRowCount()}"
-            );*/
-
-            Console.WriteLine("Row count AFTER : "+languagePage.GetLanguageRowCount());
-
             Assert.That(
-                languagePage.WaitForLanguageRowCount(countBefore + 1),
+                page.WaitForLanguageRowCount(countBefore + 1),
                 Is.True,
                 "The language row count should increase by one."
             );
         }
         finally
         {
-            // Attempt cleanup even if an assertion fails after adding.
-            languagePage.DeleteLanguageIfExists(language);
+            page.DeleteLanguageIfExists(language);
         }
     }
 
     [Test]
     public void EditLanguageWithValidDetails()
     {
-        string? email = Environment.GetEnvironmentVariable("MARS_EMAIL");
-        string? password = Environment.GetEnvironmentVariable("MARS_PASSWORD");
-
-        Assert.That(email, Is.Not.Null.And.Not.Empty, "MARS_EMAIL is not set.");
-        Assert.That(password, Is.Not.Null.And.Not.Empty, "MARS_PASSWORD is not set.");
+        var page = languagePage
+           ?? throw new InvalidOperationException("Language page was not created.");
 
         string suffix = Guid.NewGuid().ToString("N")[..8];
         string originalLanguage = "AutoA" + suffix;
         string updatedLanguage = "AutoB" + suffix;
 
-        using IWebDriver driver = CommonDriver.CreateChromeDriver();
-        driver.Navigate().GoToUrl("http://localhost:5003/Home");
-
-        var loginPage = new LoginPage(driver);
-        loginPage.Login(email!, password!);
-
-        Assert.That(
-            loginPage.IsLoggedInSuccessfully(),
-            Is.True,
-            "Login should succeed before testing languages."
-        );
-
-        var languagePage = new LanguagePage(driver);
-        int countBefore = languagePage.GetLanguageRowCount();
+        int countBefore = page.GetLanguageRowCount();
 
         Assert.That(
             countBefore,
@@ -113,38 +100,38 @@ public class LanguageTests
             "The profile needs a free language slot for this test."
         );
 
-        Assert.That(languagePage.IsLanguageDisplayed(originalLanguage), Is.False);
-        Assert.That(languagePage.IsLanguageDisplayed(updatedLanguage), Is.False);
+        Assert.That(page.IsLanguageDisplayed(originalLanguage), Is.False);
+        Assert.That(page.IsLanguageDisplayed(updatedLanguage), Is.False);
 
         try
         {
             // Arrange: create and verify the record we will edit.
-            languagePage.AddLanguage(originalLanguage, "Basic");
+            page.AddLanguage(originalLanguage, "Basic");
 
             Assert.That(
-                languagePage.IsLanguageAndLevelDisplayed(originalLanguage, "Basic"),
+                page.IsLanguageAndLevelDisplayed(originalLanguage, "Basic"),
                 Is.True,
                 "The original language should exist before editing."
             );
 
             // Act: edit the record.
-            languagePage.EditLanguage(originalLanguage, updatedLanguage, "Fluent");
+            page.EditLanguage(originalLanguage, updatedLanguage, "Fluent");
 
             // Assert: the updated row replaces the original.
             Assert.That(
-                languagePage.IsLanguageAndLevelDisplayed(updatedLanguage, "Fluent"),
+                page.IsLanguageAndLevelDisplayed(updatedLanguage, "Fluent"),
                 Is.True,
                 "The updated language and level should appear."
             );
 
             Assert.That(
-                languagePage.IsLanguageRemoved(originalLanguage),
+                page.IsLanguageRemoved(originalLanguage),
                 Is.True,
                 "The original language should no longer appear."
             );
 
             Assert.That(
-                languagePage.GetLanguageRowCount(),
+                page.GetLanguageRowCount(),
                 Is.EqualTo(countBefore + 1),
                 "Editing should not create an extra row."
             );
@@ -152,37 +139,23 @@ public class LanguageTests
         finally
         {
             // The record may have either name if the test fails during editing.
-            languagePage.DeleteLanguageIfExists(originalLanguage);
-            languagePage.DeleteLanguageIfExists(updatedLanguage);
+            page.DeleteLanguageIfExists(originalLanguage);
+            page.DeleteLanguageIfExists(updatedLanguage);
         }
     }
 
     [Test]
     public void DeleteLanguageWithValidDetails()
     {
-        string? email = Environment.GetEnvironmentVariable("MARS_EMAIL");
-        string? password = Environment.GetEnvironmentVariable("MARS_PASSWORD");
-
-        Assert.That(email, Is.Not.Null.And.Not.Empty, "MARS_EMAIL is not set.");
-        Assert.That(password, Is.Not.Null.And.Not.Empty, "MARS_PASSWORD is not set.");
+        var page = languagePage
+           ?? throw new InvalidOperationException("Language page was not created.");
 
         string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
         string level = "Basic";
 
-        using IWebDriver driver = CommonDriver.CreateChromeDriver();
-        driver.Navigate().GoToUrl("http://localhost:5003/Home");
+        int countBefore = page.GetLanguageRowCount();
 
-        var loginPage = new LoginPage(driver);
-        loginPage.Login(email!, password!);
-
-        Assert.That(
-            loginPage.IsLoggedInSuccessfully(),
-            Is.True,
-            "Login should succeed before testing languages."
-        );
-
-        var languagePage = new LanguagePage(driver);
-        int countBefore = languagePage.GetLanguageRowCount();
+        Console.WriteLine("Row count BEFORE : " + countBefore);
 
         Assert.That(
             countBefore,
@@ -191,7 +164,7 @@ public class LanguageTests
         );
 
         Assert.That(
-            languagePage.IsLanguageDisplayed(language),
+            page.IsLanguageDisplayed(language),
             Is.False,
             "The test language must not already exist."
         );
@@ -199,26 +172,28 @@ public class LanguageTests
         try
         {
             // Arrange: create the record that this test will delete.
-            languagePage.AddLanguage(language, level);
+            page.AddLanguage(language, level);
 
             Assert.That(
-                languagePage.IsLanguageAndLevelDisplayed(language, level),
+                page.IsLanguageAndLevelDisplayed(language, level),
                 Is.True,
                 "The test language should exist before deletion."
             );
 
             // Act: delete the record.
-            languagePage.DeleteLanguage(language);
+            page.DeleteLanguage(language);
 
             // Assert: check both removal and row count.
             Assert.That(
-                languagePage.IsLanguageRemoved(language),
+                page.IsLanguageRemoved(language),
                 Is.True,
                 "The deleted language should no longer appear."
             );
 
+            Console.WriteLine("Row count AFTER : " + page.GetLanguageRowCount());
+
             Assert.That(
-                languagePage.WaitForLanguageRowCount(countBefore),
+                page.WaitForLanguageRowCount(countBefore),
                 Is.True,
                 "The row count should return to its original value."
             );
@@ -226,7 +201,16 @@ public class LanguageTests
         finally
         {
             // If deletion failed, attempt to remove our test record.
-            languagePage.DeleteLanguageIfExists(language);
+           page.DeleteLanguageIfExists(language);
         }
+    }
+
+
+    [TearDown]
+    public void TearDown()
+    {
+        driver?.Dispose();
+        driver = null;
+        languagePage = null;
     }
 }
