@@ -1652,6 +1652,177 @@ public class LanguageTests
         }
     }
 
+    [Test]
+    public void EditLanguageAtFourRecordLimit()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException(
+                "Language page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Language",
+            "EditLanguageAtFourRecordLimit.json"
+        );
+
+        EditLanguageLimitData testData =
+            JsonReader.Read<EditLanguageLimitData>(filePath);
+
+        var edit = testData.RecordToEdit;
+
+        // Validate the setup data.
+        Assert.That(testData.Languages, Has.Count.EqualTo(4));
+
+        foreach (var item in testData.Languages)
+        {
+            Assert.That(item.Language, Is.Not.Null.And.Not.Empty);
+            Assert.That(item.Level, Is.Not.Null.And.Not.Empty);
+        }
+
+        Assert.That(edit.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            testData.Languages
+                .Select(item => item.Language)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count(),
+            Is.EqualTo(4),
+            "The starting languages must have different names."
+        );
+
+        Assert.That(
+            testData.Languages.Count(item =>
+                item.Language == edit.OriginalLanguage &&
+                item.Level == edit.OriginalLevel),
+            Is.EqualTo(1),
+            "The record to edit must match one starting record."
+        );
+
+        Assert.That(
+            testData.Languages.Any(item =>
+                string.Equals(
+                    item.Language,
+                    edit.UpdatedLanguage,
+                    StringComparison.OrdinalIgnoreCase
+                )),
+            Is.False,
+            "The updated name must differ from all starting names."
+        );
+
+        Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+
+        Assert.That(
+            page.GetLanguageRowCount(),
+            Is.Zero,
+            "This test requires an empty language list."
+        );
+
+        var attemptedLanguages = new List<string>();
+
+        try
+        {
+            // Arrange: fill all four slots.
+            foreach (var item in testData.Languages)
+            {
+                attemptedLanguages.Add(item.Language);
+                page.AddLanguage(item.Language, item.Level);
+
+                Assert.That(
+                    page.IsLanguageAndLevelDisplayed(
+                        item.Language,
+                        item.Level
+                    ),
+                    Is.True,
+                    $"'{item.Language}' should be created."
+                );
+
+                Assert.That(
+                    page.WaitForLanguageRowCount(attemptedLanguages.Count),
+                    Is.True
+                );
+            }
+
+            Assert.That(
+                page.IsAddNewButtonDisplay(),
+                Is.False,
+                "Add New should be unavailable at four records."
+            );
+
+            // Act: edit an existing record while the list is full.
+            attemptedLanguages.Add(edit.UpdatedLanguage);
+
+            page.EditLanguage(
+                edit.OriginalLanguage,
+                edit.UpdatedLanguage,
+                edit.UpdatedLevel
+            );
+
+            // Assert: the edit succeeds without creating another row.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    edit.UpdatedLanguage,
+                    edit.UpdatedLevel
+                ),
+                Is.True,
+                "Editing should succeed at the four-record limit."
+            );
+
+            Assert.That(
+                page.IsLanguageRemoved(edit.OriginalLanguage),
+                Is.True,
+                "The original name should no longer appear."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(edit.UpdatedLanguage),
+                Is.EqualTo(1)
+            );
+
+            Assert.That(
+                page.GetLanguageRowCount(),
+                Is.EqualTo(4),
+                "Editing should keep the row count at four."
+            );
+
+            Assert.That(
+                page.IsAddNewButtonDisplay(),
+                Is.False,
+                "Add New should remain unavailable."
+            );
+
+            // Check the other three records.
+            foreach (var item in testData.Languages.Where(
+                item => item.Language != edit.OriginalLanguage))
+            {
+                Assert.That(
+                    page.IsLanguageAndLevelDisplayed(
+                        item.Language,
+                        item.Level
+                    ),
+                    Is.True,
+                    $"'{item.Language}' and its level should remain unchanged."
+                );
+
+                Assert.That(
+                    page.GetLanguageRecordCount(item.Language),
+                    Is.EqualTo(1)
+                );
+            }
+        }
+        finally
+        {
+            foreach (string name in attemptedLanguages)
+            {
+                page.DeleteLanguageIfExists(name);
+            }
+        }
+    }
+
     /*Delete Language*/
 
     [Test]

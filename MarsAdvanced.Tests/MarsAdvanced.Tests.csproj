@@ -58,6 +58,9 @@
     <None Update="TestData\Language\DeleteLastLanguage.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Language\EditLanguageAtFourRecordLimit.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Language\EditLanguageLeavesOtherRecordUnchanged.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

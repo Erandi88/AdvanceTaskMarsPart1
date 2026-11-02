@@ -1,0 +1,26 @@
+{
+  "languages": [
+    {
+      "language": "Italian",
+      "level": "Basic"
+    },
+    {
+      "language": "Spanish",
+      "level": "Fluent"
+    },
+    {
+      "language": "German",
+      "level": "Conversational"
+    },
+    {
+      "language": "French",
+      "level": "Basic"
+    }
+  ],
+  "recordToEdit": {
+    "originalLanguage": "Italian",
+    "originalLevel": "Basic",
+    "updatedLanguage": "Portuguese",
+    "updatedLevel": "Fluent"
+  }
+}
