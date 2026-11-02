@@ -1189,6 +1189,554 @@ public class LanguageTests
         }
     }
 
+    [Test]
+    public void EditLanguageToExistingRecord()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException(
+                "Language page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Language",
+            "EditLanguageToExistingRecord.json"
+        );
+
+        EditLanguageData testData =
+            JsonReader.Read<EditLanguageData>(filePath);
+
+        Assert.That(testData.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            testData.UpdatedLanguage,
+            Is.Not.EqualTo(testData.OriginalLanguage),
+            "The setup requires two different languages."
+        );
+
+        Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+
+        int countBefore = page.GetLanguageRowCount();
+
+        Assert.That(
+            countBefore,
+            Is.LessThanOrEqualTo(2),
+            "This test needs space to create two records."
+        );
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.OriginalLanguage),
+            Is.False,
+            "The first test language must not already exist."
+        );
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.UpdatedLanguage),
+            Is.False,
+            "The second test language must not already exist."
+        );
+
+        try
+        {
+            // Arrange: create both records.
+            page.AddLanguage(
+                testData.OriginalLanguage,
+                testData.OriginalLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.OriginalLanguage,
+                    testData.OriginalLevel
+                ),
+                Is.True
+            );
+
+            page.AddLanguage(
+                testData.UpdatedLanguage,
+                testData.UpdatedLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.UpdatedLanguage,
+                    testData.UpdatedLevel
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + 2),
+                Is.True,
+                "The row count should be increased."
+            );
+
+            // Act: change the first record to match the second.
+            page.EditLanguage(
+                testData.OriginalLanguage,
+                testData.UpdatedLanguage,
+                testData.UpdatedLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAlreadyAddedMessageDisplayed(),
+                Is.True,
+                "The duplicate update should display a validation message."
+            );
+
+            page.ClickCancelButton();
+
+            // Assert: both original records remain unchanged.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.OriginalLanguage,
+                    testData.OriginalLevel
+                ),
+                Is.True,
+                "The first record should remain unchanged."
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.UpdatedLanguage,
+                    testData.UpdatedLevel
+                ),
+                Is.True,
+                "The second record should remain unchanged."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(testData.OriginalLanguage),
+                Is.EqualTo(1)
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(testData.UpdatedLanguage),
+                Is.EqualTo(1)
+            );
+
+            Assert.That(
+                page.GetLanguageRowCount(),
+                Is.EqualTo(countBefore + 2),
+                "The rejected edit should not add or remove records."
+            );
+        }
+        finally
+        {
+            page.DeleteLanguageIfExists(testData.OriginalLanguage);
+            page.DeleteLanguageIfExists(testData.UpdatedLanguage);
+        }
+    }
+
+    [Test]
+    public void CancelEditLanguage()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException(
+                "Language page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Language",
+            "CancelEditLanguage.json"
+        );
+
+        EditLanguageData testData =
+            JsonReader.Read<EditLanguageData>(filePath);
+
+        Assert.That(testData.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            testData.UpdatedLanguage,
+            Is.Not.EqualTo(testData.OriginalLanguage)
+        );
+
+        Assert.That(
+            testData.UpdatedLevel,
+            Is.Not.EqualTo(testData.OriginalLevel)
+        );
+
+        Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+
+        int countBefore = page.GetLanguageRowCount();
+
+        Assert.That(countBefore, Is.LessThan(4));
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.OriginalLanguage),
+            Is.False,
+            "The original test language must not already exist."
+        );
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.UpdatedLanguage),
+            Is.False,
+            "The updated test language must not already exist."
+        );
+
+        try
+        {
+            // Arrange: create the original record.
+            page.AddLanguage(
+                testData.OriginalLanguage,
+                testData.OriginalLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.OriginalLanguage,
+                    testData.OriginalLevel
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + 1),
+                Is.True,
+                "The row count should be increased."
+            );
+
+            // Act: enter changes, then cancel without clicking Update.
+            page.ClickEditLanguage(testData.OriginalLanguage);
+            page.EnterLanguage(testData.UpdatedLanguage);
+            page.SelectLanguageLevel(testData.UpdatedLevel);
+
+            Assert.That(
+                page.GetLanguageFieldValue(),
+                Is.EqualTo(testData.UpdatedLanguage),
+                "The edited name should be entered before cancelling."
+            );
+
+            page.ClickCancelButton();
+
+            // Assert: the saved record remains unchanged.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.OriginalLanguage,
+                    testData.OriginalLevel
+                ),
+                Is.True,
+                "Cancel should preserve the original name and level."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(testData.UpdatedLanguage),
+                Is.Zero,
+                "The unsaved language name should not appear."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(testData.OriginalLanguage),
+                Is.EqualTo(1)
+            );
+
+            Assert.That(
+                page.GetLanguageRowCount(),
+                Is.EqualTo(countBefore + 1),
+                "Cancelling should not add or remove records."
+            );
+        }
+        finally
+        {
+            page.DeleteLanguageIfExists(testData.OriginalLanguage);
+            page.DeleteLanguageIfExists(testData.UpdatedLanguage);
+        }
+    }
+
+    [Test]
+    public void EditLanguagePersistsAfterRefresh()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException(
+                "Language page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Language",
+            "EditLanguagePersistsAfterRefresh.json"
+        );
+
+        EditLanguageData testData =
+            JsonReader.Read<EditLanguageData>(filePath);
+
+        Assert.That(testData.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            testData.UpdatedLanguage,
+            Is.Not.EqualTo(testData.OriginalLanguage)
+        );
+
+        Assert.That(
+            testData.UpdatedLevel,
+            Is.Not.EqualTo(testData.OriginalLevel)
+        );
+
+        Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+
+        int countBefore = page.GetLanguageRowCount();
+
+        Assert.That(countBefore, Is.LessThan(4));
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.OriginalLanguage),
+            Is.False,
+            "The original test language must not already exist."
+        );
+
+        Assert.That(
+            page.IsLanguageDisplayed(testData.UpdatedLanguage),
+            Is.False,
+            "The updated test language must not already exist."
+        );
+
+        try
+        {
+            // Arrange: create the original record.
+            page.AddLanguage(
+                testData.OriginalLanguage,
+                testData.OriginalLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.OriginalLanguage,
+                    testData.OriginalLevel
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + 1),
+                Is.True
+            );
+
+            // Act: edit and verify before refreshing.
+            page.EditLanguage(
+                testData.OriginalLanguage,
+                testData.UpdatedLanguage,
+                testData.UpdatedLevel
+            );
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.UpdatedLanguage,
+                    testData.UpdatedLevel
+                ),
+                Is.True,
+                "The updated record should appear before refresh."
+            );
+
+            Assert.That(
+                page.IsLanguageRemoved(testData.OriginalLanguage),
+                Is.True
+            );
+
+            browser.Navigate().Refresh();
+
+            // Assert: the saved update survives the reload.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    testData.UpdatedLanguage,
+                    testData.UpdatedLevel
+                ),
+                Is.True,
+                "The updated name and level should remain after refresh."
+            );
+
+            Assert.That(
+                page.IsLanguageRemoved(testData.OriginalLanguage),
+                Is.True,
+                "The original name should not reappear after refresh."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(testData.UpdatedLanguage),
+                Is.EqualTo(1),
+                "Exactly one updated record should remain."
+            );
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + 1),
+                Is.True,
+                "Editing and refreshing should not change the row count."
+            );
+        }
+        finally
+        {
+            page.DeleteLanguageIfExists(testData.OriginalLanguage);
+            page.DeleteLanguageIfExists(testData.UpdatedLanguage);
+        }
+    }
+
+    [Test]
+    public void EditLanguageLeavesOtherRecordUnchanged()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException(
+                "Language page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Language",
+            "EditLanguageLeavesOtherRecordUnchanged.json"
+        );
+
+        EditLanguageIsolationData testData =
+            JsonReader.Read<EditLanguageIsolationData>(filePath);
+
+        var edit = testData.RecordToEdit;
+        var other = testData.OtherRecord;
+
+        Assert.That(edit.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Language, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Level, Is.Not.Null.And.Not.Empty);
+
+        // Keep all three names distinct so cleanup is safe.
+        string[] testNames =
+        {
+            edit.OriginalLanguage,
+            edit.UpdatedLanguage,
+            other.Language
+        };
+
+        Assert.That(
+            testNames.Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            Is.EqualTo(3),
+            "This test requires three different language names."
+        );
+
+        Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+
+        int countBefore = page.GetLanguageRowCount();
+
+        Assert.That(
+            countBefore,
+            Is.LessThanOrEqualTo(2),
+            "This test needs two free language slots."
+        );
+
+        foreach (string name in testNames)
+        {
+            Assert.That(
+                page.IsLanguageDisplayed(name),
+                Is.False,
+                $"'{name}' must not already exist."
+            );
+        }
+
+        try
+        {
+            // Arrange: create the record to edit.
+            page.AddLanguage(edit.OriginalLanguage, edit.OriginalLevel);
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    edit.OriginalLanguage,
+                    edit.OriginalLevel
+                ),
+                Is.True
+            );
+
+            // Create the record that must remain unchanged.
+            page.AddLanguage(other.Language, other.Level);
+
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    other.Language,
+                    other.Level
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + 2),
+                Is.True,
+                "The row count should be increased."
+            );
+
+            // Act: edit only the first record.
+            page.EditLanguage(
+                edit.OriginalLanguage,
+                edit.UpdatedLanguage,
+                edit.UpdatedLevel
+            );
+
+            // Assert: the selected record changed correctly.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    edit.UpdatedLanguage,
+                    edit.UpdatedLevel
+                ),
+                Is.True,
+                "The selected record should have its updated values."
+            );
+
+            Assert.That(
+                page.IsLanguageRemoved(edit.OriginalLanguage),
+                Is.True,
+                "The original name should no longer appear."
+            );
+
+            // The other record retains its name and level.
+            Assert.That(
+                page.IsLanguageAndLevelDisplayed(
+                    other.Language,
+                    other.Level
+                ),
+                Is.True,
+                "Editing another record must not change this record."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(other.Language),
+                Is.EqualTo(1),
+                "Exactly one unchanged record should remain."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(edit.UpdatedLanguage),
+                Is.EqualTo(1),
+                "Exactly one updated record should exist."
+            );
+
+            Assert.That(
+                page.GetLanguageRowCount(),
+                Is.EqualTo(countBefore + 2),
+                "Editing should not add or remove records."
+            );
+        }
+        finally
+        {
+            page.DeleteLanguageIfExists(edit.OriginalLanguage);
+            page.DeleteLanguageIfExists(edit.UpdatedLanguage);
+            page.DeleteLanguageIfExists(other.Language);
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {
