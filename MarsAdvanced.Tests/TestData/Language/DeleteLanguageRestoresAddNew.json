@@ -1,0 +1,21 @@
+{
+  "languages": [
+    {
+      "language": "Italian",
+      "level": "Basic"
+    },
+    {
+      "language": "Spanish",
+      "level": "Fluent"
+    },
+    {
+      "language": "German",
+      "level": "Conversational"
+    },
+    {
+      "language": "French",
+      "level": "Basic"
+    }
+  ],
+  "languageToDelete": "French"
+}
