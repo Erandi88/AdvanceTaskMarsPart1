@@ -1500,6 +1500,145 @@ public class SkillTests
         }
     }
 
+    [Test]
+    public void EditSkillLeavesOtherRecordUnchanged()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException(
+                "Skill page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Skill",
+            "EditSkillLeavesOtherRecordUnchanged.json"
+        );
+
+        EditSkillIsolationData testData =
+            JsonReader.Read<EditSkillIsolationData>(filePath);
+
+        var edit = testData.RecordToEdit;
+        var other = testData.OtherRecord;
+
+        Assert.That(edit.OriginalSkill, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedSkill, Is.Not.Null.And.Not.Empty);
+        Assert.That(edit.UpdatedLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Skill, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Level, Is.Not.Null.And.Not.Empty);
+
+        string[] testNames =
+        {
+        edit.OriginalSkill,
+        edit.UpdatedSkill,
+        other.Skill
+    };
+
+        Assert.That(
+            testNames.Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            Is.EqualTo(3),
+            "This test requires three different skill names."
+        );
+
+        foreach (string name in testNames)
+        {
+            Assert.That(
+                page.IsSkillDisplayed(name),
+                Is.False,
+                $"'{name}' must not already exist."
+            );
+        }
+
+        int countBefore = page.GetSkillRowCount();
+
+        try
+        {
+            // Arrange: create the record to edit.
+            page.AddSkill(edit.OriginalSkill, edit.OriginalLevel);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    edit.OriginalSkill,
+                    edit.OriginalLevel
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 1),
+                Is.True
+            );
+
+            // Create the record that must remain unchanged.
+            page.AddSkill(other.Skill, other.Level);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(other.Skill, other.Level),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 2),
+                Is.True
+            );
+
+            // Act: edit only the first record.
+            page.EditSkill(
+                edit.OriginalSkill,
+                edit.UpdatedSkill,
+                edit.UpdatedLevel
+            );
+
+            // Assert: the selected record changed correctly.
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    edit.UpdatedSkill,
+                    edit.UpdatedLevel
+                ),
+                Is.True,
+                "The selected skill should display its updated values."
+            );
+
+            Assert.That(
+                page.IsSkillRemoved(edit.OriginalSkill),
+                Is.True,
+                "The original skill name should no longer appear."
+            );
+
+            // The second record retains its name and level.
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(other.Skill, other.Level),
+                Is.True,
+                "The other skill and level should remain unchanged."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(other.Skill),
+                Is.EqualTo(1),
+                "Exactly one unchanged record should remain."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(edit.UpdatedSkill),
+                Is.EqualTo(1),
+                "Exactly one updated record should exist."
+            );
+
+            Assert.That(
+                page.GetSkillRowCount(),
+                Is.EqualTo(countBefore + 2),
+                "Editing should not add or remove records."
+            );
+        }
+        finally
+        {
+            page.DeleteSkillIfExists(edit.OriginalSkill);
+            page.DeleteSkillIfExists(edit.UpdatedSkill);
+            page.DeleteSkillIfExists(other.Skill);
+        }
+    }
+
 
 
     /* Delete Skills*/
@@ -1577,6 +1716,229 @@ public class SkillTests
         finally
         {
             // Remove the temporary record if deletion failed.
+            page.DeleteSkillIfExists(testData.Skill);
+        }
+    }
+
+    [Test]
+    public void DeleteSkillPersistsAfterRefresh()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException(
+                "Skill page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Skill",
+            "DeleteSkillPersistsAfterRefresh.json"
+        );
+
+        DeleteSkillPersistenceData testData =
+            JsonReader.Read<DeleteSkillPersistenceData>(filePath);
+
+        var target = testData.RecordToDelete;
+        var other = testData.OtherRecord;
+
+        Assert.That(target.Skill, Is.Not.Null.And.Not.Empty);
+        Assert.That(target.Level, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Skill, Is.Not.Null.And.Not.Empty);
+        Assert.That(other.Level, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            string.Equals(
+                target.Skill,
+                other.Skill,
+                StringComparison.OrdinalIgnoreCase
+            ),
+            Is.False,
+            "This test requires two different skill names."
+        );
+
+        Assert.That(
+            page.IsSkillDisplayed(target.Skill),
+            Is.False,
+            "The deletion target must not already exist."
+        );
+
+        Assert.That(
+            page.IsSkillDisplayed(other.Skill),
+            Is.False,
+            "The other test skill must not already exist."
+        );
+
+        int countBefore = page.GetSkillRowCount();
+
+        try
+        {
+            // Arrange: create both temporary records.
+            page.AddSkill(target.Skill, target.Level);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(target.Skill, target.Level),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 1),
+                Is.True
+            );
+
+            page.AddSkill(other.Skill, other.Level);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(other.Skill, other.Level),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 2),
+                Is.True
+            );
+
+            // Act: delete the selected skill.
+            page.DeleteSkill(target.Skill);
+
+            Assert.That(
+                page.IsSkillRemoved(target.Skill),
+                Is.True,
+                "The selected skill should disappear before refresh."
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 1),
+                Is.True,
+                "Deletion should reduce the row count by one."
+            );
+
+            browser.Navigate().Refresh();
+            page.ClickSkillsTab();
+
+            // Wait for saved Skill data to load after refresh.
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(other.Skill, other.Level),
+                Is.True,
+                "The other skill and its level should remain unchanged."
+            );
+
+            // Assert: the deleted record has not returned.
+            Assert.That(
+                page.IsSkillRemoved(target.Skill),
+                Is.True,
+                "The deleted skill must not reappear after refresh."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(target.Skill),
+                Is.Zero,
+                "No record with the deleted skill name should remain."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(other.Skill),
+                Is.EqualTo(1),
+                "Exactly one copy of the other skill should remain."
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + 1),
+                Is.True,
+                "The row count should remain unchanged after refresh."
+            );
+        }
+        finally
+        {
+            page.DeleteSkillIfExists(target.Skill);
+            page.DeleteSkillIfExists(other.Skill);
+        }
+    }
+
+    [Test]
+    public void DeleteLastSkill()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException(
+                "Skill page was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Skill",
+            "DeleteLastSkill.json"
+        );
+
+        SkillData testData =
+            JsonReader.Read<SkillData>(filePath);
+
+        Assert.That(testData.Skill, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Level, Is.Not.Null.And.Not.Empty);
+
+        Assert.That(
+            page.GetSkillRowCount(),
+            Is.Zero,
+            "This test requires an empty skill list."
+        );
+
+        try
+        {
+            // Arrange: create the only skill record.
+            page.AddSkill(testData.Skill, testData.Level);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    testData.Skill,
+                    testData.Level
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(1),
+                Is.True,
+                "Exactly one skill should exist before deletion."
+            );
+
+            // Act: delete the last record.
+            page.DeleteSkill(testData.Skill);
+
+            Assert.That(
+                page.IsSkillRemoved(testData.Skill),
+                Is.True,
+                "The last skill should disappear."
+            );
+
+            Assert.That(
+                page.WaitForSkillRowCount(0),
+                Is.True,
+                "No skill records should remain."
+            );
+
+            // Verify Add New still opens the form.
+            page.ClickAddNewButton();
+
+            Assert.That(
+                page.GetSkillFieldValue(),
+                Is.EqualTo(string.Empty),
+                "Add New should open an empty skill form."
+            );
+
+            page.ClickCancelButton();
+
+            Assert.That(
+                page.GetSkillRowCount(),
+                Is.Zero,
+                "Opening and cancelling the form should not create a record."
+            );
+        }
+        finally
+        {
             page.DeleteSkillIfExists(testData.Skill);
         }
     }

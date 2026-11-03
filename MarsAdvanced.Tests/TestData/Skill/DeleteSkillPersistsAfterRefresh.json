@@ -1,0 +1,10 @@
+{
+  "recordToDelete": {
+    "skill": "Selenium",
+    "level": "Intermediate"
+  },
+  "otherRecord": {
+    "skill": "API Testing",
+    "level": "Expert"
+  }
+}
