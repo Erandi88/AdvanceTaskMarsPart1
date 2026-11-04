@@ -94,6 +94,15 @@
     <None Update="TestData\ProfileSettings\UpdateAvailabilityToPartTimePersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ProfileSettings\UpdateHoursPersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateHoursToAsNeededPersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateHoursToMoreThan30PersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddDuplicateSkillWithDifferentLevel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

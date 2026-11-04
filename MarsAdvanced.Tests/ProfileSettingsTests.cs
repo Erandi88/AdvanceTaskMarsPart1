@@ -48,10 +48,18 @@ public class ProfileSettingsTests
         profileSettingsPage = new ProfileSettingsPage(driver);
     }
 
-    
 
-    [Test]
-    public void UpdateAvailabilityPersistsAfterRefresh()
+
+    [TestCase(
+        "UpdateAvailabilityPersistsAfterRefresh.json",
+        TestName = "Availability_PartTime_To_FullTime"
+    )]
+
+    [TestCase(
+        "UpdateAvailabilityToPartTimePersistsAfterRefresh.json",
+        TestName = "Availability_FullTime_To_PartTime"
+    )]
+    public void UpdateAvailabilityPersistsAfterRefresh(string jsonFileName)
     {
         var page = profileSettingsPage
             ?? throw new InvalidOperationException(
@@ -67,41 +75,46 @@ public class ProfileSettingsTests
             TestContext.CurrentContext.TestDirectory,
             "TestData",
             "ProfileSettings",
-            "UpdateAvailabilityPersistsAfterRefresh.json"
+            jsonFileName
         );
 
         AvailabilityData testData =
             JsonReader.Read<AvailabilityData>(filePath);
 
+        string[] supportedValues = { "Part Time", "Full Time" };
+
         Assert.That(
-            testData.InitialAvailability,
-            Is.EqualTo("Part Time")
+            supportedValues,
+            Does.Contain(testData.InitialAvailability),
+            "The initial Availability must be a supported option."
+        );
+
+        Assert.That(
+            supportedValues,
+            Does.Contain(testData.UpdatedAvailability),
+            "The updated Availability must be a supported option."
         );
 
         Assert.That(
             testData.UpdatedAvailability,
-            Is.EqualTo("Full Time")
+            Is.Not.EqualTo(testData.InitialAvailability),
+            "This scenario requires a change in Availability."
         );
 
-        // Capture the original settings before changing anything.
+        // Capture the original settings.
         string originalAvailability = page.GetAvailability();
         string originalHours = page.GetHours();
         string originalEarnTarget = page.GetEarnTarget();
 
-        Console.WriteLine("original Availability : " + originalAvailability);
-        Console.WriteLine("original Hours : " + originalHours);
-        Console.WriteLine("original Earn Target : " + originalEarnTarget);
-
-
         Assert.That(
-            originalAvailability,
-            Is.AnyOf("Part Time", "Full Time"),
-            "An existing Availability value is required for restoration."
+            supportedValues,
+            Does.Contain(originalAvailability),
+            "A supported original value is required for restoration."
         );
 
         try
         {
-            // Arrange: establish the required starting value.
+            // Arrange: establish this scenario's starting value.
             if (originalAvailability != testData.InitialAvailability)
             {
                 page.OpenAvailabilityEditor();
@@ -109,7 +122,8 @@ public class ProfileSettingsTests
 
                 Assert.That(
                     page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True
+                    Is.True,
+                    "Setup should display the save notification."
                 );
 
                 Assert.That(
@@ -117,33 +131,33 @@ public class ProfileSettingsTests
                         testData.InitialAvailability
                     ),
                     Is.True,
-                    "Setup should save Part Time."
+                    $"Setup should save '{testData.InitialAvailability}'."
                 );
             }
 
-            // Act: change Part Time to Full Time.
+            // Act: select this scenario's updated value.
             page.OpenAvailabilityEditor();
             page.SelectAvailability(testData.UpdatedAvailability);
 
             Assert.That(
                 page.IsAvailabilityUpdatedMessageDisplayed(),
                 Is.True,
-                "The 'Availability updated' message should appear."
+                "The save notification should appear."
             );
 
             Assert.That(
                 page.WaitForAvailability(testData.UpdatedAvailability),
                 Is.True,
-                "Full Time should be displayed before refresh."
+                $"'{testData.UpdatedAvailability}' should appear before refresh."
             );
 
             browser.Navigate().Refresh();
 
-            // Assert: the update persists and other settings are preserved.
+            // Assert: verify persistence and preserve other settings.
             Assert.That(
                 page.WaitForAvailability(testData.UpdatedAvailability),
                 Is.True,
-                "Full Time should remain after refresh."
+                $"'{testData.UpdatedAvailability}' should remain after refresh."
             );
 
             Assert.That(
@@ -160,150 +174,8 @@ public class ProfileSettingsTests
         }
         finally
         {
-            // Reload to close any open editor and read the saved value.
-            browser.Navigate().Refresh();
-            Console.WriteLine("Page Availability at finally : " + page.GetAvailability());
-            if (page.GetAvailability() != originalAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(originalAvailability);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Availability should show a save message."
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(originalAvailability),
-                    Is.True,
-                    "Cleanup should restore the original Availability."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForAvailability(originalAvailability),
-                Is.True,
-                "The original Availability should remain after cleanup."
-            );
-        }
-    }
-
-    [Test]
-    public void UpdateAvailabilityToPartTimePersistsAfterRefresh()
-    {
-        var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
-        var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
-
-        string filePath = Path.Combine(
-            TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            "UpdateAvailabilityToPartTimePersistsAfterRefresh.json"
-        );
-
-        AvailabilityData testData =
-            JsonReader.Read<AvailabilityData>(filePath);
-
-        Assert.That(
-            testData.InitialAvailability,
-            Is.EqualTo("Full Time")
-        );
-
-        Assert.That(
-            testData.UpdatedAvailability,
-            Is.EqualTo("Part Time")
-        );
-
-        // Capture the original settings before changing anything.
-        string originalAvailability = page.GetAvailability();
-        string originalHours = page.GetHours();
-        string originalEarnTarget = page.GetEarnTarget();
-
-        Console.WriteLine("original Availability : " + originalAvailability);
-        Console.WriteLine("original Hours : " + originalHours);
-        Console.WriteLine("original Earn Target : " + originalEarnTarget);
-
-
-        Assert.That(
-            originalAvailability,
-            Is.AnyOf("Part Time", "Full Time"),
-            "An existing Availability value is required for restoration."
-        );
-
-        try
-        {
-            // Arrange: establish the required starting value.
-            if (originalAvailability != testData.InitialAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(testData.InitialAvailability);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(
-                        testData.InitialAvailability
-                    ),
-                    Is.True,
-                    "Setup should save Part Time."
-                );
-            }
-
-            // Act: change Part Time to Full Time.
-            page.OpenAvailabilityEditor();
-            page.SelectAvailability(testData.UpdatedAvailability);
-
-            Assert.That(
-                page.IsAvailabilityUpdatedMessageDisplayed(),
-                Is.True,
-                "The 'Availability updated' message should appear."
-            );
-
-            Assert.That(
-                page.WaitForAvailability(testData.UpdatedAvailability),
-                Is.True,
-                "Full Time should be displayed before refresh."
-            );
-
             browser.Navigate().Refresh();
 
-            // Assert: the update persists and other settings are preserved.
-            Assert.That(
-                page.WaitForAvailability(testData.UpdatedAvailability),
-                Is.True,
-                "Full Time should remain after refresh."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Changing Availability must not change Hours."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Changing Availability must not change Earn Target."
-            );
-        }
-        finally
-        {
-            // Reload to close any open editor and read the saved value.
-            browser.Navigate().Refresh();
-            Console.WriteLine("Page Availability at finally : " + page.GetAvailability());
             if (page.GetAvailability() != originalAvailability)
             {
                 page.OpenAvailabilityEditor();
@@ -460,6 +332,169 @@ public class ProfileSettingsTests
                 page.WaitForAvailability(originalAvailability),
                 Is.True,
                 "The original Availability should remain after cleanup."
+            );
+        }
+    }
+
+    /* Hours */
+
+    [TestCase(
+        "UpdateHoursPersistsAfterRefresh.json",
+        TestName = "Hours_MoreThan30_To_LessThan30"
+    )]
+
+    [TestCase(
+        "UpdateHoursToAsNeededPersistsAfterRefresh.json",
+        TestName = "Hours_LessThan30_To_AsNeeded"
+    )]
+
+    [TestCase(
+        "UpdateHoursToMoreThan30PersistsAfterRefresh.json",
+        TestName = "Hours_AsNeeded_To_MoreThan30"
+    )]
+    public void UpdateHoursPersistsAfterRefresh(string jsonFileName)
+    {
+        var page = profileSettingsPage
+            ?? throw new InvalidOperationException(
+                "Profile settings page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ProfileSettings",
+            jsonFileName
+        );
+
+        HoursData testData = JsonReader.Read<HoursData>(filePath);
+
+        string[] supportedHours =
+        {
+        "Less than 30hours a week",
+        "More than 30hours a week",
+        "As needed"
+    };
+
+        Assert.That(
+            supportedHours,
+            Does.Contain(testData.InitialHours),
+            "The initial Hours must be a supported option."
+        );
+
+        Assert.That(
+            supportedHours,
+            Does.Contain(testData.UpdatedHours),
+            "The updated Hours must be a supported option."
+        );
+
+        Assert.That(
+            testData.UpdatedHours,
+            Is.Not.EqualTo(testData.InitialHours),
+            "This scenario requires a change in Hours."
+        );
+
+        // Capture the original settings for comparison and cleanup.
+        string originalHours = page.GetHours();
+        string originalAvailability = page.GetAvailability();
+        string originalEarnTarget = page.GetEarnTarget();
+
+        Assert.That(
+            supportedHours,
+            Does.Contain(originalHours),
+            "An existing supported Hours value is required for restoration."
+        );
+
+        try
+        {
+            // Arrange: establish this scenario's starting value.
+            if (originalHours != testData.InitialHours)
+            {
+                page.OpenHoursEditor();
+                page.SelectHours(testData.InitialHours);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Setup should display the save notification."
+                );
+
+                Assert.That(
+                    page.WaitForHours(testData.InitialHours),
+                    Is.True,
+                    $"Setup should save '{testData.InitialHours}'."
+                );
+            }
+
+            // Act: select this scenario's updated value.
+            page.OpenHoursEditor();
+            page.SelectHours(testData.UpdatedHours);
+
+            Assert.That(
+                page.IsAvailabilityUpdatedMessageDisplayed(),
+                Is.True,
+                "The save notification should appear."
+            );
+
+            Assert.That(
+                page.WaitForHours(testData.UpdatedHours),
+                Is.True,
+                $"'{testData.UpdatedHours}' should appear before refresh."
+            );
+
+            browser.Navigate().Refresh();
+
+            // Assert: verify persistence and preserve other settings.
+            Assert.That(
+                page.WaitForHours(testData.UpdatedHours),
+                Is.True,
+                $"'{testData.UpdatedHours}' should remain after refresh."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Changing Hours must not change Availability."
+            );
+
+            Assert.That(
+                page.GetEarnTarget(),
+                Is.EqualTo(originalEarnTarget),
+                "Changing Hours must not change Earn Target."
+            );
+        }
+        finally
+        {
+            browser.Navigate().Refresh();
+
+            if (page.GetHours() != originalHours)
+            {
+                page.OpenHoursEditor();
+                page.SelectHours(originalHours);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Restoring Hours should display a save notification."
+                );
+
+                Assert.That(
+                    page.WaitForHours(originalHours),
+                    Is.True,
+                    "Cleanup should restore the original Hours."
+                );
+
+                browser.Navigate().Refresh();
+            }
+
+            Assert.That(
+                page.WaitForHours(originalHours),
+                Is.True,
+                "The original Hours should remain after cleanup."
             );
         }
     }

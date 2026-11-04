@@ -28,6 +28,15 @@ public class ProfileSettingsPage
         "//span[i[contains(@class,'write')]]"
     );
 
+    private readonly By HoursDropdown =
+    By.Name("availabiltyHour");
+
+    private readonly By HoursEditButton = By.XPath(
+        "//div[contains(concat(' ', normalize-space(@class), ' '), ' item ')]" +
+        "[.//text()[normalize-space(.)='Hours']]" +
+        "//i[contains(@class,'write')]"
+    );
+
     private readonly By EarnTargetValue = By.XPath(
         "//div[contains(concat(' ', normalize-space(@class), ' '), ' item ')]" +
         "[.//text()[normalize-space(.)='Earn Target']]" +
@@ -149,5 +158,50 @@ public class ProfileSettingsPage
                 AvailabilityDropdown
             )
         );
+    }
+
+    public void OpenHoursEditor()
+    {
+        _wait.Until(
+            ExpectedConditions.ElementToBeClickable(HoursEditButton)
+        ).Click();
+
+        _wait.Until(
+            ExpectedConditions.ElementIsVisible(HoursDropdown)
+        );
+    }
+
+    public void SelectHours(string hours)
+    {
+        // Avoid mistaking an earlier notification for this save.
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(
+                AvailabilityUpdatedMessage
+            )
+        );
+
+        var dropdown = _wait.Until(
+            ExpectedConditions.ElementToBeClickable(HoursDropdown)
+        );
+
+        new SelectElement(dropdown).SelectByText(hours);
+    }
+
+    public bool WaitForHours(string expectedValue)
+    {
+        try
+        {
+            return _wait.Until(driver =>
+            {
+                var element = driver.FindElement(HoursValue);
+
+                return element.Displayed &&
+                       element.Text.Trim() == expectedValue;
+            });
+        }
+        catch (WebDriverTimeoutException)
+        {
+            return false;
+        }
     }
 }
