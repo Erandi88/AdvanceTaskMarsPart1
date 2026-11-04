@@ -88,10 +88,25 @@
     <None Update="TestData\ProfileSettings\CloseAvailabilityWithoutChanges.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ProfileSettings\CloseEarnTargetWithoutChanges.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\CloseHoursWithoutChanges.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\ProfileSettings\UpdateAvailabilityPersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ProfileSettings\UpdateAvailabilityToPartTimePersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateEarnTargetToBetween500And1000.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateEarnTargetToLessThan500.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateEarnTargetToMoreThan1000.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ProfileSettings\UpdateHoursPersistsAfterRefresh.json">

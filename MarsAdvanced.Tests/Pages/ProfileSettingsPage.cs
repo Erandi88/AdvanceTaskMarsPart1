@@ -52,6 +52,25 @@ public class ProfileSettingsPage
         "/following-sibling::i[contains(@class,'remove')]"
     );
 
+    private readonly By HoursCancelButton = By.XPath(
+        "//select[@name='availabiltyHour']" +
+        "/following-sibling::i[contains(@class,'remove')]"
+    );
+
+    private readonly By EarnTargetDropdown =
+    By.Name("availabiltyTarget");
+
+    private readonly By EarnTargetEditButton = By.XPath(
+        "//div[contains(concat(' ', normalize-space(@class), ' '), ' item ')]" +
+        "[.//text()[normalize-space(.)='Earn Target']]" +
+        "//i[contains(@class,'write')]"
+    );
+
+    private readonly By EarnTargetCancelButton = By.XPath(
+        "//select[@name='availabiltyTarget']" +
+        "/following-sibling::i[contains(@class,'remove')]"
+    );
+
     public ProfileSettingsPage(IWebDriver driver)
     {
         _driver = driver;
@@ -203,5 +222,76 @@ public class ProfileSettingsPage
         {
             return false;
         }
+    }
+
+    public void CloseHoursEditor()
+    {
+        _wait.Until(
+            ExpectedConditions.ElementToBeClickable(HoursCancelButton)
+        ).Click();
+
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(HoursDropdown)
+        );
+    }
+
+    /* Earn Target */
+    public void OpenEarnTargetEditor()
+    {
+        _wait.Until(
+            ExpectedConditions.ElementToBeClickable(EarnTargetEditButton)
+        ).Click();
+
+        _wait.Until(
+            ExpectedConditions.ElementIsVisible(EarnTargetDropdown)
+        );
+    }
+
+    public void SelectEarnTarget(string earnTarget)
+    {
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(
+                AvailabilityUpdatedMessage
+            )
+        );
+
+        var dropdown = _wait.Until(
+            ExpectedConditions.ElementToBeClickable(EarnTargetDropdown)
+        );
+
+        new SelectElement(dropdown).SelectByText(earnTarget);
+    }
+
+    public bool WaitForEarnTarget(string expectedValue)
+    {
+        try
+        {
+            return _wait.Until(driver =>
+            {
+                var element = driver.FindElement(EarnTargetValue);
+
+                return element.Displayed &&
+                       element.Text.Trim() == expectedValue;
+            });
+        }
+        catch (WebDriverTimeoutException)
+        {
+            return false;
+        }
+    }
+
+    public void CloseEarnTargetEditor()
+    {
+        _wait.Until(
+            ExpectedConditions.ElementToBeClickable(
+                EarnTargetCancelButton
+            )
+        ).Click();
+
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(
+                EarnTargetDropdown
+            )
+        );
     }
 }

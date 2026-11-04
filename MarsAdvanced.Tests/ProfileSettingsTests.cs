@@ -499,6 +499,449 @@ public class ProfileSettingsTests
         }
     }
 
+    [Test]
+    public void CloseHoursWithoutChanges()
+    {
+        var page = profileSettingsPage
+            ?? throw new InvalidOperationException(
+                "Profile settings page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ProfileSettings",
+            "CloseHoursWithoutChanges.json"
+        );
+
+        HoursData testData = JsonReader.Read<HoursData>(filePath);
+
+        Assert.That(
+            testData.InitialHours,
+            Is.EqualTo("More than 30hours a week")
+        );
+
+        // Remember the original settings before changing anything.
+        string originalHours = page.GetHours();
+        string originalAvailability = page.GetAvailability();
+        string originalEarnTarget = page.GetEarnTarget();
+
+        Assert.That(
+            originalHours,
+            Is.AnyOf(
+                "Less than 30hours a week",
+                "More than 30hours a week",
+                "As needed"
+            ),
+            "A supported original Hours value is required for restoration."
+        );
+
+        try
+        {
+            // Arrange: establish the required starting value.
+            if (originalHours != testData.InitialHours)
+            {
+                page.OpenHoursEditor();
+                page.SelectHours(testData.InitialHours);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Setup should display the save notification."
+                );
+
+                Assert.That(
+                    page.WaitForHours(testData.InitialHours),
+                    Is.True,
+                    "Setup should save the initial Hours value."
+                );
+            }
+
+            // Act: open and close Hours without selecting another option.
+            page.OpenHoursEditor();
+            page.CloseHoursEditor();
+
+            // Assert: closing preserves all three settings.
+            Assert.That(
+                page.GetHours(),
+                Is.EqualTo(testData.InitialHours),
+                "Hours should remain unchanged after closing the editor."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged."
+            );
+
+            Assert.That(
+                page.GetEarnTarget(),
+                Is.EqualTo(originalEarnTarget),
+                "Earn Target should remain unchanged."
+            );
+
+            browser.Navigate().Refresh();
+
+            // Verify the same values after reload.
+            Assert.That(
+                page.WaitForHours(testData.InitialHours),
+                Is.True,
+                "Hours should remain unchanged after refresh."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged after refresh."
+            );
+
+            Assert.That(
+                page.GetEarnTarget(),
+                Is.EqualTo(originalEarnTarget),
+                "Earn Target should remain unchanged after refresh."
+            );
+        }
+        finally
+        {
+            browser.Navigate().Refresh();
+
+            if (page.GetHours() != originalHours)
+            {
+                page.OpenHoursEditor();
+                page.SelectHours(originalHours);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Restoring Hours should display a save notification."
+                );
+
+                Assert.That(
+                    page.WaitForHours(originalHours),
+                    Is.True,
+                    "Cleanup should restore the original Hours."
+                );
+
+                browser.Navigate().Refresh();
+            }
+
+            Assert.That(
+                page.WaitForHours(originalHours),
+                Is.True,
+                "The original Hours should remain after cleanup."
+            );
+        }
+    }
+
+    /* Earn Target */
+
+    [TestCase(
+        "UpdateEarnTargetToBetween500And1000.json",
+        TestName = "EarnTarget_LessThan500_To_Between500And1000"
+    )]
+
+    [TestCase(
+        "UpdateEarnTargetToMoreThan1000.json",
+        TestName = "EarnTarget_Between500And1000_To_MoreThan1000"
+    )]
+
+    [TestCase(
+        "UpdateEarnTargetToLessThan500.json",
+        TestName = "EarnTarget_MoreThan1000_To_LessThan500"
+    )]
+
+    public void UpdateEarnTargetPersistsAfterRefresh(string jsonFileName)
+    {
+        var page = profileSettingsPage
+            ?? throw new InvalidOperationException(
+                "Profile settings page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ProfileSettings",
+            jsonFileName
+        );
+
+        EarnTargetData testData =
+            JsonReader.Read<EarnTargetData>(filePath);
+
+        string[] supportedValues =
+        {
+        "Less than $500 per month",
+        "Between $500 and $1000 per month",
+        "More than $1000 per month"
+    };
+
+        Assert.That(
+            supportedValues,
+            Does.Contain(testData.InitialEarnTarget),
+            "The initial Earn Target must be a supported option."
+        );
+
+        Assert.That(
+            supportedValues,
+            Does.Contain(testData.UpdatedEarnTarget),
+            "The updated Earn Target must be a supported option."
+        );
+
+        Assert.That(
+            testData.UpdatedEarnTarget,
+            Is.Not.EqualTo(testData.InitialEarnTarget),
+            "This scenario requires a change in Earn Target."
+        );
+
+        // Capture the original settings.
+        string originalEarnTarget = page.GetEarnTarget();
+        string originalAvailability = page.GetAvailability();
+        string originalHours = page.GetHours();
+
+        Assert.That(
+            supportedValues,
+            Does.Contain(originalEarnTarget),
+            "A supported original value is required for restoration."
+        );
+
+        try
+        {
+            // Arrange: establish this scenario's starting value.
+            if (originalEarnTarget != testData.InitialEarnTarget)
+            {
+                page.OpenEarnTargetEditor();
+                page.SelectEarnTarget(testData.InitialEarnTarget);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Setup should display the save notification."
+                );
+
+                Assert.That(
+                    page.WaitForEarnTarget(testData.InitialEarnTarget),
+                    Is.True,
+                    $"Setup should save '{testData.InitialEarnTarget}'."
+                );
+            }
+
+            // Act: select the updated value.
+            page.OpenEarnTargetEditor();
+            page.SelectEarnTarget(testData.UpdatedEarnTarget);
+
+            Assert.That(
+                page.IsAvailabilityUpdatedMessageDisplayed(),
+                Is.True,
+                "The save notification should appear."
+            );
+
+            Assert.That(
+                page.WaitForEarnTarget(testData.UpdatedEarnTarget),
+                Is.True,
+                "The updated Earn Target should appear before refresh."
+            );
+
+            browser.Navigate().Refresh();
+
+            // Assert: verify persistence and preserve other settings.
+            Assert.That(
+                page.WaitForEarnTarget(testData.UpdatedEarnTarget),
+                Is.True,
+                $"'{testData.UpdatedEarnTarget}' should remain after refresh."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Changing Earn Target must not change Availability."
+            );
+
+            Assert.That(
+                page.GetHours(),
+                Is.EqualTo(originalHours),
+                "Changing Earn Target must not change Hours."
+            );
+        }
+        finally
+        {
+            browser.Navigate().Refresh();
+
+            if (page.GetEarnTarget() != originalEarnTarget)
+            {
+                page.OpenEarnTargetEditor();
+                page.SelectEarnTarget(originalEarnTarget);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Restoring Earn Target should show a save message."
+                );
+
+                Assert.That(
+                    page.WaitForEarnTarget(originalEarnTarget),
+                    Is.True,
+                    "Cleanup should restore the original Earn Target."
+                );
+
+                browser.Navigate().Refresh();
+            }
+
+            Assert.That(
+                page.WaitForEarnTarget(originalEarnTarget),
+                Is.True,
+                "The original Earn Target should remain after cleanup."
+            );
+        }
+    }
+
+    [Test]
+    public void CloseEarnTargetWithoutChanges()
+    {
+        var page = profileSettingsPage
+            ?? throw new InvalidOperationException(
+                "Profile settings page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ProfileSettings",
+            "CloseEarnTargetWithoutChanges.json"
+        );
+
+        EarnTargetData testData =
+            JsonReader.Read<EarnTargetData>(filePath);
+
+        Assert.That(
+            testData.InitialEarnTarget,
+            Is.EqualTo("Less than $500 per month")
+        );
+
+        // Capture the original settings before changing anything.
+        string originalEarnTarget = page.GetEarnTarget();
+        string originalAvailability = page.GetAvailability();
+        string originalHours = page.GetHours();
+
+        Assert.That(
+            originalEarnTarget,
+            Is.AnyOf(
+                "Less than $500 per month",
+                "Between $500 and $1000 per month",
+                "More than $1000 per month"
+            ),
+            "A supported original value is required for restoration."
+        );
+
+        try
+        {
+            // Arrange: establish the required starting value.
+            if (originalEarnTarget != testData.InitialEarnTarget)
+            {
+                page.OpenEarnTargetEditor();
+                page.SelectEarnTarget(testData.InitialEarnTarget);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Setup should display the save notification."
+                );
+
+                Assert.That(
+                    page.WaitForEarnTarget(testData.InitialEarnTarget),
+                    Is.True,
+                    "Setup should save the initial Earn Target."
+                );
+            }
+
+            // Act: open and close without selecting another option.
+            page.OpenEarnTargetEditor();
+            page.CloseEarnTargetEditor();
+
+            // Assert: closing preserves all three settings.
+            Assert.That(
+                page.GetEarnTarget(),
+                Is.EqualTo(testData.InitialEarnTarget),
+                "Earn Target should remain unchanged after closing."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged."
+            );
+
+            Assert.That(
+                page.GetHours(),
+                Is.EqualTo(originalHours),
+                "Hours should remain unchanged."
+            );
+
+            browser.Navigate().Refresh();
+
+            Assert.That(
+                page.WaitForEarnTarget(testData.InitialEarnTarget),
+                Is.True,
+                "Earn Target should remain unchanged after refresh."
+            );
+
+            Assert.That(
+                page.GetAvailability(),
+                Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged after refresh."
+            );
+
+            Assert.That(
+                page.GetHours(),
+                Is.EqualTo(originalHours),
+                "Hours should remain unchanged after refresh."
+            );
+        }
+        finally
+        {
+            browser.Navigate().Refresh();
+
+            if (page.GetEarnTarget() != originalEarnTarget)
+            {
+                page.OpenEarnTargetEditor();
+                page.SelectEarnTarget(originalEarnTarget);
+
+                Assert.That(
+                    page.IsAvailabilityUpdatedMessageDisplayed(),
+                    Is.True,
+                    "Restoring Earn Target should show a save message."
+                );
+
+                Assert.That(
+                    page.WaitForEarnTarget(originalEarnTarget),
+                    Is.True,
+                    "Cleanup should restore the original Earn Target."
+                );
+
+                browser.Navigate().Refresh();
+            }
+
+            Assert.That(
+                page.WaitForEarnTarget(originalEarnTarget),
+                Is.True,
+                "The original Earn Target should remain after cleanup."
+            );
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {
