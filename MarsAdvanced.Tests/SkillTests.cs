@@ -1639,8 +1639,6 @@ public class SkillTests
         }
     }
 
-
-
     /* Delete Skills*/
 
     [Test]

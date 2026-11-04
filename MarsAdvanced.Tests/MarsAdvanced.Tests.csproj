@@ -85,6 +85,15 @@
     <None Update="TestData\Language\EditLanguageWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ProfileSettings\CloseAvailabilityWithoutChanges.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateAvailabilityPersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ProfileSettings\UpdateAvailabilityToPartTimePersistsAfterRefresh.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddDuplicateSkillWithDifferentLevel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -142,6 +151,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="TestData\ProfileSettings\" />
     <Folder Include="TestData\Skill\" />
   </ItemGroup>
 
