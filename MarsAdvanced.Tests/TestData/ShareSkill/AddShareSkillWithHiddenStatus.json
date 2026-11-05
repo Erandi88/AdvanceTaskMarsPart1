@@ -1,0 +1,12 @@
+{
+  "title": "QA Hidden Listing",
+  "description": "This listing is used to verify the cancel action",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Hidden"
+}

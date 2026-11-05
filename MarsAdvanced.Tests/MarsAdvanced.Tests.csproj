@@ -124,6 +124,9 @@
     <None Update="TestData\ShareSkill\AddShareSkillWithEmptyTitle.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithHiddenStatus.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithMissingCategory.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -134,6 +137,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithMissingTags.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithOneOffService.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithOnSiteLocation.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithValidDetails.json">

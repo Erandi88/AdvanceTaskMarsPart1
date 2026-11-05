@@ -46,8 +46,27 @@ public class ShareSkillTests
     }
 
 
-    [Test]
-    public void AddShareSkillWithValidDetails()
+    [TestCase(
+        "AddShareSkillWithValidDetails.json",
+        TestName = "ShareSkill_CreateHourlyOnlineActive"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithOneOffService.json",
+        TestName = "ShareSkill_CreateOneOff"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithOnSiteLocation.json",
+        TestName = "ShareSkill_CreateOnSite"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithHiddenStatus.json",
+        TestName = "ShareSkill_CreateHidden"
+    )]
+
+    public void AddShareSkillWithValidDetails(string jsonFileName)
     {
         var browser = driver
             ?? throw new InvalidOperationException(
@@ -58,7 +77,7 @@ public class ShareSkillTests
             TestContext.CurrentContext.TestDirectory,
             "TestData",
             "ShareSkill",
-            "AddShareSkillWithValidDetails.json"
+            jsonFileName
         );
 
         ShareSkillData testData =
@@ -70,12 +89,31 @@ public class ShareSkillTests
         Assert.That(testData.Subcategory, Is.Not.Null.And.Not.Empty);
 
         Assert.That(testData.Tags, Is.Not.Null.And.Not.Empty);
-        Assert.That(testData.SkillExchangeTags,Is.Not.Null.And.Not.Empty);
+        Assert.That(
+            testData.SkillExchangeTags,
+            Is.Not.Null.And.Not.Empty
+        );
 
-        Assert.That(testData.ServiceType, Is.EqualTo("Hourly basis service"));
-        Assert.That(testData.LocationType, Is.EqualTo("Online"));
-        Assert.That(testData.SkillTrade, Is.EqualTo("Skill-exchange"));
-        Assert.That(testData.ActiveStatus, Is.EqualTo("Active"));
+        // Allow the supported variations supplied by each JSON file.
+        Assert.That(
+            testData.ServiceType,
+            Is.AnyOf("Hourly basis service", "One-off service")
+        );
+
+        Assert.That(
+            testData.LocationType,
+            Is.AnyOf("Online", "On-site")
+        );
+
+        Assert.That(
+            testData.SkillTrade,
+            Is.EqualTo("Skill-exchange")
+        );
+
+        Assert.That(
+            testData.ActiveStatus,
+            Is.AnyOf("Active", "Hidden")
+        );
 
         foreach (string tag in testData.Tags.Concat(
             testData.SkillExchangeTags))
@@ -83,7 +121,7 @@ public class ShareSkillTests
             Assert.That(tag, Is.Not.Null.And.Not.Empty);
         }
 
-        // Give this test's listing a unique, recognisable title.
+        // Generate a unique title for safe verification and cleanup.
         string suffix = Guid.NewGuid().ToString("N")[..8];
         string title = $"{testData.Title} {suffix}";
 
@@ -101,7 +139,6 @@ public class ShareSkillTests
         var form = new ShareSkillPage(browser);
         var listings = new ManageListingsPage(browser);
 
-        // Protect existing data before attempting any creation.
         listings.Open();
 
         Assert.That(
@@ -115,10 +152,9 @@ public class ShareSkillTests
         try
         {
             form.OpenShareSkill();
-
             form.FillForm(testData, title);
 
-            // Calendar and Work Samples remain empty for this flow.
+            // Calendar and Work Samples remain empty for these cases.
             saveAttempted = true;
             form.ClickSave();
             form.WaitForSaveToComplete();
@@ -131,7 +167,7 @@ public class ShareSkillTests
                 "The saved listing should appear in Manage Listings."
             );
 
-            // Verify the listing survives a page reload.
+            // Verify persistence after reloading.
             browser.Navigate().Refresh();
             listings.Open();
 
@@ -141,23 +177,23 @@ public class ShareSkillTests
                 "The saved listing should remain after refresh."
             );
 
-            // Open the saved listing and verify its field values.
             listings.OpenListingForEdit(title);
 
-            Assert.That(
-                form.GetTitle(),
-                Is.EqualTo(title),
-                "The complete saved title should match the submitted title."
-            );
-
-            Assert.That(
-                form.GetDescription(),
-                Is.EqualTo(testData.Description),
-                "The complete saved description should match the JSON."
-            );
-
+            // Compare the saved values with this scenario's data.
             Assert.Multiple(() =>
             {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(title),
+                    "The complete saved title should match."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Description),
+                    "The complete saved description should match."
+                );
+
                 Assert.That(
                     form.GetCategory(),
                     Is.EqualTo(testData.Category),
@@ -207,13 +243,10 @@ public class ShareSkillTests
                 );
             });
 
-           
-            // Leave editing without saving changes.
             form.ClickCancel();
         }
         finally
         {
-            // Save might have succeeded even if later verification failed.
             if (saveAttempted)
             {
                 listings.Open();
@@ -221,6 +254,8 @@ public class ShareSkillTests
             }
         }
     }
+
+
 
 
     [Test]

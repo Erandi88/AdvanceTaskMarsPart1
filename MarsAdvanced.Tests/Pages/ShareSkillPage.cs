@@ -171,26 +171,32 @@ public class ShareSkillPage
     }
 
     // Click the styled radio label, then verify selection.
-    private void SelectRadioOption(
-        string groupName,
-        string optionText)
+    private void SelectRadioOption(string groupName,string optionText)
     {
-        var labelLocator = By.XPath(
-            $"//input[@type='radio' and @name='{groupName}']" +
-            "/following-sibling::label[" +
-            $"normalize-space()={XPathLiteral(optionText)}]"
-        );
-
-        _wait.Until(
-            ExpectedConditions.ElementToBeClickable(labelLocator)
-        ).Click();
-
         var inputLocator = By.XPath(
             $"//input[@type='radio' and @name='{groupName}']" +
             "[following-sibling::label[" +
             $"normalize-space()={XPathLiteral(optionText)}]]"
         );
 
+        var input = _wait.Until(driver =>
+        {
+            var element = driver.FindElement(inputLocator);
+            var container = element.FindElement(By.XPath(".."));
+
+            // Styled inputs may be transparent; check their visible container.
+            return element.Enabled && container.Displayed
+                ? element
+                : null;
+        });
+
+        // Avoid clicking an option that is already selected.
+        if (!input.Selected)
+        {
+            input.Click();
+        }
+
+        // Confirm that the requested option actually became selected.
         _wait.Until(driver =>
             driver.FindElement(inputLocator).Selected
         );
