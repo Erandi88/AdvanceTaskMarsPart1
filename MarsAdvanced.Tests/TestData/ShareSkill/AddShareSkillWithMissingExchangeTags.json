@@ -1,0 +1,12 @@
+{
+  "title": "QA Missing Exchange Tags",
+  "description": "This listing checks validation when no exchange skills are added",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [],
+  "activeStatus": "Active"
+}

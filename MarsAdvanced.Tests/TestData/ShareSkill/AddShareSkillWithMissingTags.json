@@ -1,0 +1,12 @@
+{
+  "title": "QA Missing Tags",
+  "description": "This listing checks validation when no service tags are added",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

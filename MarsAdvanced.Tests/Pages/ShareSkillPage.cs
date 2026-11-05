@@ -446,12 +446,84 @@ public class ShareSkillPage
         );
     }
 
-    // Check the required-title validation message.
-    public bool IsTitleRequiredMessageDisplayed()
+    
+
+    // Fill a Skill-exchange form while deliberately omitting one field.
+    public void FillFormWithMissingField(
+        ShareSkillData data,
+        string title,
+        string missingField)
+    {
+        string[] supportedFields =
+        {"Title", "Description", "Category", "Subcategory", "Tags", "Skill-Exchange"};
+
+        if (!supportedFields.Contains(missingField))
+        {
+            throw new ArgumentException(
+                $"Unsupported missing field: '{missingField}'.",
+                nameof(missingField)
+            );
+        }
+
+        if (data.SkillTrade != "Skill-exchange")
+        {
+            throw new ArgumentException(
+                "This method currently supports Skill-exchange listings only.",
+                nameof(data)
+            );
+        }
+
+        EnterTitle(missingField == "Title" ? string.Empty : title);
+
+        EnterDescription(
+            missingField == "Description"
+                ? string.Empty
+                : data.Description
+        );
+
+        // Subcategory cannot be selected without a Category.
+        if (missingField != "Category")
+        {
+            SelectCategory(data.Category);
+
+            if (missingField != "Subcategory")
+            {
+                SelectSubcategory(data.Subcategory);
+            }
+        }
+
+        if (missingField != "Tags")
+        {
+            foreach (string tag in data.Tags)
+            {
+                AddTag(tag);
+            }
+        }
+
+        SelectServiceType(data.ServiceType);
+        SelectLocationType(data.LocationType);
+        SelectSkillTrade(data.SkillTrade);
+
+        if (missingField != "Skill-Exchange")
+        {
+            foreach (string tag in data.SkillExchangeTags)
+            {
+                AddSkillExchangeTag(tag);
+            }
+        }
+
+        SelectActiveStatus(data.ActiveStatus);
+    }
+
+    // Check the expected validation message for any required field.
+    // Check validation labels with or without the prompt class.
+    public bool IsValidationMessageDisplayed(string expectedMessage)
     {
         var message = By.XPath(
-            "//div[contains(@class,'prompt')]" +
-            "[normalize-space()='Title is required']"
+            "//div[" +
+            "contains(concat(' ', normalize-space(@class), ' '), ' red ') and " +
+            "contains(concat(' ', normalize-space(@class), ' '), ' label ')" +
+            $"][normalize-space()={XPathLiteral(expectedMessage)}]"
         );
 
         try

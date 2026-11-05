@@ -304,8 +304,49 @@ public class ShareSkillTests
         }
     }
 
-    [Test]
-    public void AddShareSkillWithEmptyTitle()
+    [TestCase(
+        "AddShareSkillWithEmptyTitle.json",
+        "Title",
+        "Title is required",
+        TestName = "ShareSkill_RejectsEmptyTitle"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithEmptyDescription.json",
+        "Description",
+        "Description is required",
+        TestName = "ShareSkill_RejectsEmptyDescription"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithMissingCategory.json",
+        "Category",
+        "Category is required",
+        TestName = "ShareSkill_RejectsMissingCategory"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithMissingSubcategory.json",
+        "Subcategory",
+        "Subcategory is required",
+        TestName = "ShareSkill_RejectsMissingSubcategory"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithMissingTags.json",
+        "Tags",
+        "Tags are required",
+        TestName = "ShareSkill_RejectsMissingTags"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithMissingExchangeTags.json",
+        "Skill-Exchange",
+        "Tag is required",
+        TestName = "ShareSkill_RejectsMissingExchangeTags"
+    )]
+
+    public void AddShareSkillWithMissingRequiredField(string jsonFileName,string missingField, string expectedMessage)
     {
         var browser = driver
             ?? throw new InvalidOperationException(
@@ -316,93 +357,124 @@ public class ShareSkillTests
             TestContext.CurrentContext.TestDirectory,
             "TestData",
             "ShareSkill",
-            "AddShareSkillWithEmptyTitle.json"
+            jsonFileName
         );
 
-        ShareSkillData testData =
-            JsonReader.Read<ShareSkillData>(filePath);
+        ShareSkillData testData = JsonReader.Read<ShareSkillData>(filePath);
 
-        Assert.That(
-            testData.Title,
-            Is.EqualTo(string.Empty),
-            "This scenario requires a completely empty title."
-        );
+        // Preserve an empty title; otherwise generate a unique title.
+        string title = missingField == "Title"
+            ? string.Empty
+            : $"{testData.Title} {Guid.NewGuid().ToString("N")[..8]}";
 
-        Assert.That(
-            testData.Description,
-            Is.Not.Null.And.Not.Empty
-        );
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+
+        if (missingField != "Title")
+        {
+            Assert.That(
+                testData.Title,
+                Is.Not.Null.And.Not.Empty,
+                "Other scenarios require a valid title."
+            );
+        }
+
+        if (missingField != "Description")
+        {
+            Assert.That(
+                testData.Description,
+                Is.Not.Null.And.Not.Empty,
+                "Other scenarios require a valid description."
+            );
+        }
 
         var form = new ShareSkillPage(browser);
         var listings = new ManageListingsPage(browser);
 
-        // Arrange: capture listings before opening the form.
+        // Capture all existing listing titles, including duplicates.
         listings.Open();
         List<string> titlesBefore = listings.GetAllListingTitles();
 
-        form.OpenShareSkill();
+        if (!string.IsNullOrEmpty(title))
+        {
+            Assert.That(
+                titlesBefore,
+                Does.Not.Contain(title),
+                "The generated title must not already exist."
+            );
+        }
 
-        // Pass the empty title directly—do not add a unique suffix.
-        form.FillForm(testData, testData.Title);
+        try
+        {
+            form.OpenShareSkill();
 
-        Assert.That(
-            form.GetTitle(),
-            Is.EqualTo(string.Empty),
-            "The title must be empty before submitting."
-        );
+            form.FillFormWithMissingField(
+                testData,
+                title,
+                missingField
+            );
 
-        // Act: attempt to save the otherwise completed form.
-        form.ClickSave();
+            // Confirm the intended input is empty before submitting.
+            if (missingField == "Title")
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(string.Empty));
+            }
+            else if (missingField == "Description")
+            {
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(string.Empty)
+                );
+            }
 
-        // Assert: validation appears and the form remains open.
-        Assert.That(
-            form.IsTitleRequiredMessageDisplayed(),
-            Is.True,
-            "The 'Title is required' message should appear."
-        );
+            form.ClickSave();
 
-        Assert.That(
-            form.GetTitle(),
-            Is.EqualTo(string.Empty),
-            "The form should remain open with an empty title."
-        );
+            Assert.That(
+                form.IsValidationMessageDisplayed(expectedMessage),
+                Is.True,
+                $"Missing {missingField} should display '{expectedMessage}'."
+            );
 
-        Assert.That(
-            form.GetDescription(),
-            Is.EqualTo(testData.Description),
-            "The entered description should remain in the form."
-        );
+            // Reading the fields confirms the form remains open.
+            Assert.That(form.GetTitle(), Is.EqualTo(title));
 
-        // Close the rejected form without saving.
-        form.ClickCancel();
-        form.WaitForFormToClose();
+            Assert.That(
+                form.GetDescription(),
+                Is.EqualTo(
+                    missingField == "Description"
+                        ? string.Empty
+                        : testData.Description
+                )
+            );
 
-        listings.Open();
-        List<string> titlesAfter = listings.GetAllListingTitles();
+            form.ClickCancel();
+            form.WaitForFormToClose();
 
-        Assert.That(
-            titlesAfter.Count,
-            Is.EqualTo(titlesBefore.Count),
-            "The total listing count should remain unchanged."
-        );
+            listings.Open();
 
-        Assert.That(
-            titlesAfter,
-            Is.EquivalentTo(titlesBefore),
-            "The listing title collection should remain unchanged."
-        );
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "The rejected Save must leave the listing collection unchanged."
+            );
 
-        // Verify the same result after reloading.
-        browser.Navigate().Refresh();
-        listings.Open();
+            browser.Navigate().Refresh();
+            listings.Open();
 
-        List<string> titlesAfterRefresh = listings.GetAllListingTitles();
-
-        Assert.That(
-            titlesAfterRefresh,
-            Is.EquivalentTo(titlesBefore),
-            "No additional listing should appear after refresh."
-        );
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "The listing collection should remain unchanged after refresh."
+            );
+        }
+        finally
+        {
+            // Never delete by an empty title.
+            if (!string.IsNullOrEmpty(title))
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(title);
+            }
+        }
     }
 
     [TearDown]
