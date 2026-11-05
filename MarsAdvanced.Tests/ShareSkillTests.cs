@@ -223,6 +223,87 @@ public class ShareSkillTests
     }
 
 
+    [Test]
+    public void CancelShareSkill()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "CancelShareSkill.json"
+        );
+
+        ShareSkillData testData =
+            JsonReader.Read<ShareSkillData>(filePath);
+
+        Assert.That(testData.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Description, Is.Not.Null.And.Not.Empty);
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string title = $"{testData.Title} {suffix}";
+
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+        Assert.That(testData.Description.Length, Is.LessThanOrEqualTo(600));
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        // Confirm this test cannot target an existing listing.
+        listings.Open();
+
+        Assert.That(
+            listings.FindListingByTitle(title),
+            Is.False,
+            "The generated test title must not already exist."
+        );
+
+        try
+        {
+            // Arrange: complete the form without saving.
+            form.OpenShareSkill();
+            form.FillForm(testData, title);
+
+            Assert.That(
+                form.GetTitle(),
+                Is.EqualTo(title),
+                "The form should contain the test title before Cancel."
+            );
+
+            // Act: cancel instead of saving.
+            form.ClickCancel();
+            form.WaitForFormToClose();
+
+            // Assert: no listing was created.
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(title),
+                Is.False,
+                "Cancel must not create a listing."
+            );
+
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(title),
+                Is.False,
+                "The cancelled listing must remain absent after refresh."
+            );
+        }
+        finally
+        {
+            // Remove the test listing if a defect unexpectedly created it.
+            listings.Open();
+            listings.DeleteListingIfExists(title);
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {

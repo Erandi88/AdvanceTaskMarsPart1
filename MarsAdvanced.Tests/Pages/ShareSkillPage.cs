@@ -436,4 +436,14 @@ public class ShareSkillPage
         });
     }
 
+    // Wait for the form to close after Cancel.
+    public void WaitForFormToClose()
+    {
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(
+                TitleField
+            )
+        );
+    }
+
 }

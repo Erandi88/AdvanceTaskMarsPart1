@@ -121,6 +121,9 @@
     <None Update="TestData\ShareSkill\AddShareSkillWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ShareSkill\CancelShareSkill.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddDuplicateSkillWithDifferentLevel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
