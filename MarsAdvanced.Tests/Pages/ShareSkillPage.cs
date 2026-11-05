@@ -327,4 +327,113 @@ public class ShareSkillPage
         SelectActiveStatus(data.ActiveStatus);
     }
 
+    // Read the current title without changing it.
+    public string GetTitle()
+    {
+        var field = _wait.Until(
+            ExpectedConditions.ElementIsVisible(TitleField)
+        );
+
+        return field.GetDomProperty("value") ?? string.Empty;
+    }
+
+    // Read the complete description without changing it.
+    public string GetDescription()
+    {
+        var field = _wait.Until(
+            ExpectedConditions.ElementIsVisible(DescriptionField)
+        );
+
+        return field.GetDomProperty("value") ?? string.Empty;
+    }
+
+    // Read the selected category.
+    public string GetCategory()
+    {
+        return GetSelectedOption(CategoryDropdown);
+    }
+
+    // Read the selected subcategory.
+    public string GetSubcategory()
+    {
+        return GetSelectedOption(SubcategoryDropdown);
+    }
+
+    private string GetSelectedOption(By locator)
+    {
+        var dropdown = _wait.Until(
+            ExpectedConditions.ElementIsVisible(locator)
+        );
+
+        return new SelectElement(dropdown).SelectedOption.Text.Trim();
+    }
+
+    // Read committed tags from the correct field.
+    public List<string> GetTags()
+    {
+        return GetTagsFromField("Tags");
+    }
+
+    public List<string> GetSkillExchangeTags()
+    {
+        return GetTagsFromField("Skill-Exchange");
+    }
+
+    private List<string> GetTagsFromField(string heading)
+    {
+        var containerLocator = By.XPath(FieldColumnXPath(heading));
+
+        var container = _wait.Until(
+            ExpectedConditions.ElementIsVisible(containerLocator)
+        );
+
+        return container.FindElements(
+            By.CssSelector("span.ReactTags__tag")
+        )
+        .Select(tag => tag.Text.TrimEnd('×').Trim())
+        .ToList();
+    }
+
+    // Read each group's selected radio label.
+    public string GetServiceType()
+    {
+        return GetSelectedRadioLabel("serviceType");
+    }
+
+    public string GetLocationType()
+    {
+        return GetSelectedRadioLabel("locationType");
+    }
+
+    public string GetSkillTrade()
+    {
+        return GetSelectedRadioLabel("skillTrades");
+    }
+
+    public string GetActiveStatus()
+    {
+        return GetSelectedRadioLabel("isActive");
+    }
+
+    private string GetSelectedRadioLabel(string groupName)
+    {
+        return _wait.Until(driver =>
+        {
+            var selectedInput = driver.FindElements(
+                By.CssSelector(
+                    $"input[type='radio'][name='{groupName}']"
+                )
+            ).FirstOrDefault(input => input.Selected);
+
+            if (selectedInput == null)
+                return null;
+
+            string label = selectedInput.FindElement(
+                By.XPath("./following-sibling::label")
+            ).Text.Trim();
+
+            return string.IsNullOrEmpty(label) ? null : label;
+        });
+    }
+
 }

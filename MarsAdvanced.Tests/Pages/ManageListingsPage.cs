@@ -286,4 +286,54 @@ public class ManageListingsPage
             );
         }
     }
+
+    // Open the edit form for the exact test listing.
+    public void OpenListingForEdit(string title)
+    {
+        if (!FindListingByTitle(title))
+        {
+            throw new NoSuchElementException(
+                $"Listing '{title}' was not found."
+            );
+        }
+
+        var row = FindRowOnCurrentPage(title)
+            ?? throw new NoSuchElementException(
+                $"Listing '{title}' is no longer on the current page."
+            );
+
+        var editButton = row.FindElement(
+            By.XPath(
+                ".//button[i[contains(" +
+                "concat(' ', normalize-space(@class), ' ')," +
+                "' write ')]]"
+            )
+        );
+
+        _wait.Until(_ =>
+            editButton.Displayed && editButton.Enabled
+        );
+
+        editButton.Click();
+
+        // Wait for this listing's data, not just an empty form.
+        _wait.Until(driver =>
+        {
+            try
+            {
+                var field = driver.FindElement(By.Name("title"));
+
+                return field.Displayed &&
+                       field.GetDomProperty("value") == title;
+            }
+            catch (NoSuchElementException)
+            {
+                return false;
+            }
+            catch (StaleElementReferenceException)
+            {
+                return false;
+            }
+        });
+    }
 }

@@ -140,6 +140,76 @@ public class ShareSkillTests
                 Is.True,
                 "The saved listing should remain after refresh."
             );
+
+            // Open the saved listing and verify its field values.
+            listings.OpenListingForEdit(title);
+
+            Assert.That(
+                form.GetTitle(),
+                Is.EqualTo(title),
+                "The complete saved title should match the submitted title."
+            );
+
+            Assert.That(
+                form.GetDescription(),
+                Is.EqualTo(testData.Description),
+                "The complete saved description should match the JSON."
+            );
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetCategory(),
+                    Is.EqualTo(testData.Category),
+                    "The saved category should match."
+                );
+
+                Assert.That(
+                    form.GetSubcategory(),
+                    Is.EqualTo(testData.Subcategory),
+                    "The saved subcategory should match."
+                );
+
+                Assert.That(
+                    form.GetTags(),
+                    Is.EquivalentTo(testData.Tags),
+                    "The saved tags should match."
+                );
+
+                Assert.That(
+                    form.GetSkillExchangeTags(),
+                    Is.EquivalentTo(testData.SkillExchangeTags),
+                    "The saved exchange tags should match."
+                );
+
+                Assert.That(
+                    form.GetServiceType(),
+                    Is.EqualTo(testData.ServiceType),
+                    "The saved service type should match."
+                );
+
+                Assert.That(
+                    form.GetLocationType(),
+                    Is.EqualTo(testData.LocationType),
+                    "The saved location type should match."
+                );
+
+                Assert.That(
+                    form.GetSkillTrade(),
+                    Is.EqualTo(testData.SkillTrade),
+                    "The saved skill trade should match."
+                );
+
+                Assert.That(
+                    form.GetActiveStatus(),
+                    Is.EqualTo(testData.ActiveStatus),
+                    "The saved active status should match."
+                );
+            });
+
+           
+            // Leave editing without saving changes.
+            form.ClickCancel();
         }
         finally
         {
