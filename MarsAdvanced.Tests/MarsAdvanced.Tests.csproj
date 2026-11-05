@@ -118,6 +118,9 @@
     <None Update="TestData\ProfileSettings\UpdateHoursToMoreThan30PersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithValidDetails.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddDuplicateSkillWithDifferentLevel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -175,6 +178,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="TestData\ShareSkill\" />
     <Folder Include="TestData\ProfileSettings\" />
     <Folder Include="TestData\Skill\" />
   </ItemGroup>
