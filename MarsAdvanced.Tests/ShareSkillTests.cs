@@ -304,6 +304,107 @@ public class ShareSkillTests
         }
     }
 
+    [Test]
+    public void AddShareSkillWithEmptyTitle()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "AddShareSkillWithEmptyTitle.json"
+        );
+
+        ShareSkillData testData =
+            JsonReader.Read<ShareSkillData>(filePath);
+
+        Assert.That(
+            testData.Title,
+            Is.EqualTo(string.Empty),
+            "This scenario requires a completely empty title."
+        );
+
+        Assert.That(
+            testData.Description,
+            Is.Not.Null.And.Not.Empty
+        );
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        // Arrange: capture listings before opening the form.
+        listings.Open();
+        List<string> titlesBefore = listings.GetAllListingTitles();
+
+        form.OpenShareSkill();
+
+        // Pass the empty title directly—do not add a unique suffix.
+        form.FillForm(testData, testData.Title);
+
+        Assert.That(
+            form.GetTitle(),
+            Is.EqualTo(string.Empty),
+            "The title must be empty before submitting."
+        );
+
+        // Act: attempt to save the otherwise completed form.
+        form.ClickSave();
+
+        // Assert: validation appears and the form remains open.
+        Assert.That(
+            form.IsTitleRequiredMessageDisplayed(),
+            Is.True,
+            "The 'Title is required' message should appear."
+        );
+
+        Assert.That(
+            form.GetTitle(),
+            Is.EqualTo(string.Empty),
+            "The form should remain open with an empty title."
+        );
+
+        Assert.That(
+            form.GetDescription(),
+            Is.EqualTo(testData.Description),
+            "The entered description should remain in the form."
+        );
+
+        // Close the rejected form without saving.
+        form.ClickCancel();
+        form.WaitForFormToClose();
+
+        listings.Open();
+        List<string> titlesAfter = listings.GetAllListingTitles();
+
+        Assert.That(
+            titlesAfter.Count,
+            Is.EqualTo(titlesBefore.Count),
+            "The total listing count should remain unchanged."
+        );
+
+        Assert.That(
+            titlesAfter,
+            Is.EquivalentTo(titlesBefore),
+            "The listing title collection should remain unchanged."
+        );
+
+        // Verify the same result after reloading.
+        browser.Navigate().Refresh();
+        listings.Open();
+
+        List<string> titlesAfterRefresh = listings.GetAllListingTitles();
+
+        Assert.That(
+            titlesAfterRefresh,
+            Is.EquivalentTo(titlesBefore),
+            "No additional listing should appear after refresh."
+        );
+    }
+
     [TearDown]
     public void TearDown()
     {

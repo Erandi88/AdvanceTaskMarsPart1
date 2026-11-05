@@ -336,4 +336,30 @@ public class ManageListingsPage
             }
         });
     }
+
+    // Capture titles across all pages, retaining duplicate and blank titles.
+    public List<string> GetAllListingTitles()
+    {
+        GoToFirstPage();
+
+        var titles = new List<string>();
+
+        while (true)
+        {
+            foreach (var row in _driver.FindElements(ListingRows))
+            {
+                var cells = row.FindElements(By.TagName("td"));
+
+                if (cells.Count >= 3)
+                {
+                    titles.Add(cells[2].Text.Trim());
+                }
+            }
+
+            if (!IsButtonEnabled(NextButton))
+                return titles;
+
+            ChangePage(NextButton);
+        }
+    }
 }

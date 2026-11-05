@@ -446,4 +446,24 @@ public class ShareSkillPage
         );
     }
 
+    // Check the required-title validation message.
+    public bool IsTitleRequiredMessageDisplayed()
+    {
+        var message = By.XPath(
+            "//div[contains(@class,'prompt')]" +
+            "[normalize-space()='Title is required']"
+        );
+
+        try
+        {
+            return _wait.Until(
+                ExpectedConditions.ElementIsVisible(message)
+            ).Displayed;
+        }
+        catch (WebDriverTimeoutException)
+        {
+            return false;
+        }
+    }
+
 }
