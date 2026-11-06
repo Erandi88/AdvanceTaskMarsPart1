@@ -14,6 +14,7 @@ public class ShareSkillPage
     private readonly By DescriptionField = By.Name("description");
     private readonly By CategoryDropdown = By.Name("categoryId");
     private readonly By SubcategoryDropdown = By.Name("subcategoryId");
+    private readonly By CreditAmountField = By.Name("charge");
 
     // tag inputs to their field headings.
     private readonly By TagsInput = TagInputFor("Tags");
@@ -302,11 +303,12 @@ public class ShareSkillPage
     // Fill the valid Skill-exchange form without submitting it.
     public void FillForm(ShareSkillData data, string title)
     {
-        if (data.SkillTrade != "Skill-exchange")
+        // Validate the trade type before filling the form.
+        if (data.SkillTrade != "Skill-exchange" &&
+            data.SkillTrade != "Credit")
         {
             throw new ArgumentException(
-                "FillForm currently supports Skill-exchange listings only.",
-                nameof(data)
+                $"Unsupported skill trade: {data.SkillTrade}"
             );
         }
 
@@ -325,9 +327,17 @@ public class ShareSkillPage
         SelectLocationType(data.LocationType);
         SelectSkillTrade(data.SkillTrade);
 
-        foreach (string tag in data.SkillExchangeTags)
+        // Fill the field shown for the selected trade type.
+        if (data.SkillTrade == "Skill-exchange")
         {
-            AddSkillExchangeTag(tag);
+            foreach (string tag in data.SkillExchangeTags)
+            {
+                AddSkillExchangeTag(tag);
+            }
+        }
+        else
+        {
+            EnterCreditAmount(data.CreditAmount);
         }
 
         SelectActiveStatus(data.ActiveStatus);
@@ -542,6 +552,27 @@ public class ShareSkillPage
         {
             return false;
         }
+    }
+
+    public void EnterCreditAmount(string amount)
+    {
+        // Replace the default amount after selecting Credit.
+        var input = _wait.Until(
+            ExpectedConditions.ElementToBeClickable(CreditAmountField)
+        );
+
+        input.Clear();
+        input.SendKeys(amount);
+    }
+
+    public string GetCreditAmount()
+    {
+        // Read the amount displayed in the saved listing's edit form.
+        var input = _wait.Until(
+            ExpectedConditions.ElementIsVisible(CreditAmountField)
+        );
+
+        return input.GetDomProperty("value") ?? "";
     }
 
 }

@@ -1,0 +1,13 @@
+{
+  "title": "QA Credit Listing",
+  "description": "I provide Selenium automation practice for an hourly service charge.",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Credit",
+  "skillExchangeTags": [],
+  "creditAmount": "5",
+  "activeStatus": "Active"
+}

@@ -66,6 +66,11 @@ public class ShareSkillTests
         TestName = "ShareSkill_CreateHidden"
     )]
 
+    [TestCase(
+        "AddShareSkillWithCredit.json",
+        TestName = "ShareSkill_CreateCredit"
+    )]
+
     public void AddShareSkillWithValidDetails(string jsonFileName)
     {
         var browser = driver
@@ -89,10 +94,7 @@ public class ShareSkillTests
         Assert.That(testData.Subcategory, Is.Not.Null.And.Not.Empty);
 
         Assert.That(testData.Tags, Is.Not.Null.And.Not.Empty);
-        Assert.That(
-            testData.SkillExchangeTags,
-            Is.Not.Null.And.Not.Empty
-        );
+      
 
         // Allow the supported variations supplied by each JSON file.
         Assert.That(
@@ -107,8 +109,29 @@ public class ShareSkillTests
 
         Assert.That(
             testData.SkillTrade,
-            Is.EqualTo("Skill-exchange")
+            Is.AnyOf("Skill-exchange", "Credit")
         );
+
+        if (testData.SkillTrade == "Skill-exchange")
+        {
+            Assert.That(
+                testData.SkillExchangeTags,
+                Is.Not.Null.And.Not.Empty
+            );
+        }
+        else
+        {
+            Assert.That(
+                testData.CreditAmount,
+                Is.Not.Null.And.Not.Empty
+            );
+
+            Assert.That(
+                testData.CreditAmount.Length,
+                Is.LessThanOrEqualTo(4),
+                "The credit amount must fit the input's four-character limit."
+            );
+        }
 
         Assert.That(
             testData.ActiveStatus,
@@ -212,11 +235,23 @@ public class ShareSkillTests
                     "The saved tags should match."
                 );
 
-                Assert.That(
-                    form.GetSkillExchangeTags(),
-                    Is.EquivalentTo(testData.SkillExchangeTags),
-                    "The saved exchange tags should match."
-                );
+                // Verify the saved value for the selected trade type.
+                if (testData.SkillTrade == "Skill-exchange")
+                {
+                    Assert.That(
+                        form.GetSkillExchangeTags(),
+                        Is.EquivalentTo(testData.SkillExchangeTags),
+                        "The saved exchange tags should match."
+                    );
+                }
+                else
+                {
+                    Assert.That(
+                        form.GetCreditAmount(),
+                        Is.EqualTo(testData.CreditAmount),
+                        "The saved credit amount should match."
+                    );
+                }
 
                 Assert.That(
                     form.GetServiceType(),

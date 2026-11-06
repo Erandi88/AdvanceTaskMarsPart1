@@ -21,4 +21,5 @@ public class ShareSkillData
     public List<string> SkillExchangeTags { get; set; } = new();
 
     public string ActiveStatus { get; set; } = string.Empty;
+    public string CreditAmount { get; set; } = "";
 }
