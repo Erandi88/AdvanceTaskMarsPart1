@@ -547,6 +547,680 @@ public class ShareSkillTests
         }
     }
 
+
+    /* EDIT */
+
+    [Test]
+    public void EditShareSkillTitleAndDescription()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "EditShareSkillTitleAndDescription.json"
+        );
+
+        var testData = JsonReader.Read<EditShareSkillData>(filePath);
+
+        Assert.That(testData.Original, Is.Not.Null);
+        Assert.That(
+            testData.Original.Title,
+            Is.Not.Null.And.Not.Empty
+        );
+        Assert.That(
+            testData.Original.Description,
+            Is.Not.Null.And.Not.Empty
+        );
+        Assert.That(
+            testData.UpdatedTitle,
+            Is.Not.Null.And.Not.Empty
+        );
+        Assert.That(
+            testData.UpdatedDescription,
+            Is.Not.Null.And.Not.Empty
+        );
+
+        // Use unique titles to identify only this test's listing.
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string originalTitle = $"{testData.Original.Title} {suffix}";
+        string updatedTitle = $"{testData.UpdatedTitle} {suffix}";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalTitle.Length, Is.LessThanOrEqualTo(100));
+            Assert.That(updatedTitle.Length, Is.LessThanOrEqualTo(100));
+
+            Assert.That(
+                testData.Original.Description.Length,
+                Is.LessThanOrEqualTo(600)
+            );
+            Assert.That(
+                testData.UpdatedDescription.Length,
+                Is.LessThanOrEqualTo(600)
+            );
+
+            Assert.That(updatedTitle, Is.Not.EqualTo(originalTitle));
+            Assert.That(
+                testData.UpdatedDescription,
+                Is.Not.EqualTo(testData.Original.Description)
+            );
+        });
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        Assert.That(listings.FindListingByTitle(originalTitle), Is.False);
+        Assert.That(listings.FindListingByTitle(updatedTitle), Is.False);
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create the listing that this test will edit.
+            form.OpenShareSkill();
+            form.FillForm(testData.Original, originalTitle);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(originalTitle),
+                Is.True,
+                "The original listing should exist before editing."
+            );
+
+            // Capture all titles to detect an extra or missing listing.
+            var expectedTitles = listings.GetAllListingTitles().ToList();
+
+            Assert.That(
+                expectedTitles.Count(title => title == originalTitle),
+                Is.EqualTo(1),
+                "Exactly one original listing should exist."
+            );
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(originalTitle));
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description)
+                );
+            });
+
+            // Act: change only the title and description.
+            form.EnterTitle(updatedTitle);
+            form.EnterDescription(testData.UpdatedDescription);
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            // Expect the updated title to replace the original title.
+            expectedTitles.Remove(originalTitle);
+            expectedTitles.Add(updatedTitle);
+
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedTitles),
+                "Editing should replace the title without adding or removing listings."
+            );
+
+            // Assert: the changes remain after refreshing.
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedTitles),
+                "The updated listing should remain after refresh."
+            );
+
+            listings.OpenListingForEdit(updatedTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(updatedTitle),
+                    "The updated title should be saved."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.UpdatedDescription),
+                    "The updated description should be saved."
+                );
+
+                // Other fields should retain their original values.
+                Assert.That(
+                    form.GetCategory(),
+                    Is.EqualTo(testData.Original.Category)
+                );
+                Assert.That(
+                    form.GetSubcategory(),
+                    Is.EqualTo(testData.Original.Subcategory)
+                );
+                Assert.That(
+                    form.GetTags(),
+                    Is.EquivalentTo(testData.Original.Tags)
+                );
+                Assert.That(
+                    form.GetSkillExchangeTags(),
+                    Is.EquivalentTo(testData.Original.SkillExchangeTags)
+                );
+                Assert.That(
+                    form.GetServiceType(),
+                    Is.EqualTo(testData.Original.ServiceType)
+                );
+                Assert.That(
+                    form.GetLocationType(),
+                    Is.EqualTo(testData.Original.LocationType)
+                );
+                Assert.That(
+                    form.GetSkillTrade(),
+                    Is.EqualTo(testData.Original.SkillTrade)
+                );
+                Assert.That(
+                    form.GetActiveStatus(),
+                    Is.EqualTo(testData.Original.ActiveStatus)
+                );
+            });
+
+            form.ClickCancel();
+        }
+        finally
+        {
+            // Either title may exist if creation or editing fails.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(originalTitle);
+                listings.DeleteListingIfExists(updatedTitle);
+            }
+        }
+    }
+
+    [Test]
+    public void CancelEditShareSkill()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "CancelEditShareSkill.json"
+        );
+
+        var testData = JsonReader.Read<EditShareSkillData>(filePath);
+
+        Assert.That(testData.Original, Is.Not.Null);
+        Assert.That(testData.Original.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Original.Description, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedTitle, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedDescription, Is.Not.Null.And.Not.Empty);
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string originalTitle = $"{testData.Original.Title} {suffix}";
+        string updatedTitle = $"{testData.UpdatedTitle} {suffix}";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalTitle.Length, Is.LessThanOrEqualTo(100));
+            Assert.That(updatedTitle.Length, Is.LessThanOrEqualTo(100));
+            Assert.That(
+                testData.Original.Description.Length,
+                Is.LessThanOrEqualTo(600)
+            );
+            Assert.That(
+                testData.UpdatedDescription.Length,
+                Is.LessThanOrEqualTo(600)
+            );
+
+            Assert.That(updatedTitle, Is.Not.EqualTo(originalTitle));
+            Assert.That(
+                testData.UpdatedDescription,
+                Is.Not.EqualTo(testData.Original.Description)
+            );
+        });
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        Assert.That(listings.FindListingByTitle(originalTitle), Is.False);
+        Assert.That(listings.FindListingByTitle(updatedTitle), Is.False);
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create a listing owned by this test.
+            form.OpenShareSkill();
+            form.FillForm(testData.Original, originalTitle);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(originalTitle),
+                Is.True,
+                "The original listing should exist before editing."
+            );
+
+            var titlesBefore = listings.GetAllListingTitles().ToList();
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(originalTitle));
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description)
+                );
+            });
+
+            // Enter changes and confirm they reached the form.
+            form.EnterTitle(updatedTitle);
+            form.EnterDescription(testData.UpdatedDescription);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(updatedTitle));
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.UpdatedDescription)
+                );
+            });
+
+            // Act: discard the changes.
+            form.ClickCancel();
+            form.WaitForFormToClose();
+
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "Cancelling should leave the listing titles unchanged."
+            );
+
+            // Assert: original values remain after refresh.
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "No changed listing should appear after refresh."
+            );
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(originalTitle),
+                    "Cancelling should preserve the original title."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description),
+                    "Cancelling should preserve the original description."
+                );
+            });
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+        }
+        finally
+        {
+            // Check both titles in case changes were saved unexpectedly.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(originalTitle);
+                listings.DeleteListingIfExists(updatedTitle);
+            }
+        }
+    }
+
+
+    [Test]
+    public void EditShareSkillWithEmptyTitle()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "EditShareSkillWithEmptyTitle.json"
+        );
+
+        var testData = JsonReader.Read<EditShareSkillData>(filePath);
+
+        Assert.That(testData.Original, Is.Not.Null);
+        Assert.That(testData.Original.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Original.Description, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.UpdatedTitle, Is.EqualTo(string.Empty));
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string originalTitle = $"{testData.Original.Title} {suffix}";
+
+        Assert.That(originalTitle.Length, Is.LessThanOrEqualTo(100));
+        Assert.That(
+            testData.Original.Description.Length,
+            Is.LessThanOrEqualTo(600)
+        );
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        Assert.That(
+            listings.FindListingByTitle(originalTitle),
+            Is.False,
+            "The generated title must not already exist."
+        );
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create the listing we will attempt to edit.
+            form.OpenShareSkill();
+            form.FillForm(testData.Original, originalTitle);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(originalTitle),
+                Is.True,
+                "The original listing should exist before editing."
+            );
+
+            var titlesBefore = listings.GetAllListingTitles().ToList();
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(originalTitle));
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description)
+                );
+            });
+
+            // Act: clear the title and attempt to save.
+            form.ClearTitle();
+
+            Assert.That(
+                form.GetTitle(),
+                Is.EqualTo(string.Empty),
+                "The title must be empty before saving."
+            );
+
+            form.ClickSave();
+
+            Assert.That(
+                form.IsValidationMessageDisplayed("Please type a Title."),
+                Is.True,
+                "An empty title should display 'Please type a Title.'."
+            );
+
+            // Leave the rejected edit, then check the saved data.
+            form.ClickCancel();
+            form.WaitForFormToClose();
+
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "The rejected edit should not change the listing titles."
+            );
+
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "Listing titles should remain unchanged after refresh."
+            );
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(originalTitle),
+                    "The original title should remain saved."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description),
+                    "The original description should remain saved."
+                );
+            });
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+        }
+        finally
+        {
+            // Remove only the listing identified by this test's title.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(originalTitle);
+            }
+        }
+    }
+
+    [Test]
+    public void EditShareSkillWithEmptyTitleAndDescription()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "EditShareSkillWithEmptyTitleAndDescription.json"
+        );
+
+        var testData = JsonReader.Read<EditShareSkillData>(filePath);
+
+        Assert.That(testData.Original, Is.Not.Null);
+        Assert.That(testData.Original.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Original.Description, Is.Not.Null.And.Not.Empty);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(testData.UpdatedTitle, Is.EqualTo(string.Empty));
+            Assert.That(testData.UpdatedDescription, Is.EqualTo(string.Empty));
+        });
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string originalTitle = $"{testData.Original.Title} {suffix}";
+
+        Assert.That(originalTitle.Length, Is.LessThanOrEqualTo(100));
+        Assert.That(
+            testData.Original.Description.Length,
+            Is.LessThanOrEqualTo(600)
+        );
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        Assert.That(
+            listings.FindListingByTitle(originalTitle),
+            Is.False,
+            "The generated title must not already exist."
+        );
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create a listing owned by this test.
+            form.OpenShareSkill();
+            form.FillForm(testData.Original, originalTitle);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(originalTitle),
+                Is.True,
+                "The original listing should exist before editing."
+            );
+
+            var titlesBefore = listings.GetAllListingTitles().ToList();
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(form.GetTitle(), Is.EqualTo(originalTitle));
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description)
+                );
+            });
+
+            // Act: clear both fields through keyboard input.
+            form.ClearTitle();
+            form.ClearDescription();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(testData.UpdatedTitle),
+                    "The title must be empty before saving."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.UpdatedDescription),
+                    "The description must be empty before saving."
+                );
+            });
+
+            form.ClickSave();
+
+            // Both required-field messages should appear.
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.IsValidationMessageDisplayed("Please type a Title."),
+                    Is.True,
+                    "An empty title should display its validation message."
+                );
+
+                Assert.That(
+                    form.IsValidationMessageDisplayed("Please type a description."),
+                    Is.True,
+                    "An empty description should display its validation message."
+                );
+            });
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "The rejected edit should leave listing titles unchanged."
+            );
+
+            // Verify the saved values remain unchanged after refresh.
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "Listing titles should remain unchanged after refresh."
+            );
+
+            listings.OpenListingForEdit(originalTitle);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(originalTitle),
+                    "The original title should remain saved."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Original.Description),
+                    "The original description should remain saved."
+                );
+            });
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+        }
+        finally
+        {
+            // Delete only the listing identified by this test's unique title.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(originalTitle);
+            }
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {

@@ -575,4 +575,34 @@ public class ShareSkillPage
         return input.GetDomProperty("value") ?? "";
     }
 
+    public void ClearTitle()
+    {
+        var input = _wait.Until(
+            ExpectedConditions.ElementToBeClickable(
+                By.Name("title")
+            )
+        );
+
+        // Clear through keyboard input so the form receives change events.
+        input.Click();
+        input.SendKeys(Keys.Control + "a");
+        input.SendKeys(Keys.Backspace);
+        input.SendKeys(Keys.Tab);
+    }
+
+    public void ClearDescription()
+    {
+        var input = _wait.Until(
+            ExpectedConditions.ElementToBeClickable(
+                By.Name("description")
+            )
+        );
+
+        // Use keyboard input to trigger the form's change handling.
+        input.Click();
+        input.SendKeys(Keys.Control + "a");
+        input.SendKeys(Keys.Backspace);
+        input.SendKeys(Keys.Tab);
+    }
+
 }
