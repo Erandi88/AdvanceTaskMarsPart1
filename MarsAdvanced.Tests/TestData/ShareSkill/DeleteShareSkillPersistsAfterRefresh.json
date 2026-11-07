@@ -1,0 +1,12 @@
+{
+  "title": "QA Delete Listing",
+  "description": "This listing verifies that a deleted service does not return after refreshing.",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

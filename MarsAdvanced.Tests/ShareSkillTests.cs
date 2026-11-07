@@ -1221,6 +1221,238 @@ public class ShareSkillTests
         }
     }
 
+    /* DELETE */
+
+    [Test]
+    public void DeleteShareSkillPersistsAfterRefresh()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "DeleteShareSkillPersistsAfterRefresh.json"
+        );
+
+        var testData = JsonReader.Read<ShareSkillData>(filePath);
+
+        Assert.That(testData.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Description, Is.Not.Null.And.Not.Empty);
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string title = $"{testData.Title} {suffix}";
+
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+        Assert.That(
+            testData.Description.Length,
+            Is.LessThanOrEqualTo(600)
+        );
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        // Capture existing titles before creating this test's listing.
+        var titlesBefore = listings.GetAllListingTitles().ToList();
+
+        Assert.That(
+            titlesBefore,
+            Does.Not.Contain(title),
+            "The generated title must not already exist."
+        );
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create the listing we will delete.
+            form.OpenShareSkill();
+            form.FillForm(testData, title);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            var expectedAfterCreation = titlesBefore.ToList();
+            expectedAfterCreation.Add(title);
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedAfterCreation),
+                "Creation should add exactly this test's listing."
+            );
+
+            // Act: delete the listing and confirm Yes.
+            listings.DeleteListing(title);
+
+            // Assert deletion before finally performs any cleanup.
+            Assert.That(
+                listings.FindListingByTitle(title),
+                Is.False,
+                "The deleted listing should no longer appear."
+            );
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "Deletion should preserve all other listing titles."
+            );
+
+            // Verify the deletion remains after refreshing.
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.FindListingByTitle(title),
+                Is.False,
+                "The deleted listing should not return after refresh."
+            );
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(titlesBefore),
+                "Other listing titles should remain unchanged after refresh."
+            );
+        }
+        finally
+        {
+            // Remove a leftover only after the test's assertions.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(title);
+            }
+        }
+    }
+
+    [Test]
+    public void CancelDeleteShareSkill()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "ShareSkill",
+            "CancelDeleteShareSkill.json"
+        );
+
+        var testData = JsonReader.Read<ShareSkillData>(filePath);
+
+        Assert.That(testData.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(testData.Description, Is.Not.Null.And.Not.Empty);
+
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string title = $"{testData.Title} {suffix}";
+
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+        Assert.That(
+            testData.Description.Length,
+            Is.LessThanOrEqualTo(600)
+        );
+
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+
+        var titlesBefore = listings.GetAllListingTitles().ToList();
+
+        Assert.That(
+            titlesBefore,
+            Does.Not.Contain(title),
+            "The generated title must not already exist."
+        );
+
+        bool creationAttempted = false;
+
+        try
+        {
+            // Arrange: create a listing owned by this test.
+            form.OpenShareSkill();
+            form.FillForm(testData, title);
+
+            creationAttempted = true;
+            form.ClickSave();
+            form.WaitForSaveToComplete();
+
+            listings.Open();
+
+            var expectedTitles = titlesBefore.ToList();
+            expectedTitles.Add(title);
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedTitles),
+                "Creation should add exactly this test's listing."
+            );
+
+            // Act: open the delete dialog and choose No.
+            listings.CancelDeleteListing(title);
+
+            Assert.That(
+                listings.FindListingByTitle(title),
+                Is.True,
+                "Cancelling deletion should preserve the listing."
+            );
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedTitles),
+                "Cancelling deletion should leave all listing titles unchanged."
+            );
+
+            // Verify the listing still exists after refresh.
+            browser.Navigate().Refresh();
+            listings.Open();
+
+            Assert.That(
+                listings.GetAllListingTitles(),
+                Is.EquivalentTo(expectedTitles),
+                "All listing titles should remain after refresh."
+            );
+
+            listings.OpenListingForEdit(title);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    form.GetTitle(),
+                    Is.EqualTo(title),
+                    "The original title should remain saved."
+                );
+
+                Assert.That(
+                    form.GetDescription(),
+                    Is.EqualTo(testData.Description),
+                    "The original description should remain saved."
+                );
+            });
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+        }
+        finally
+        {
+            // Clean up only after verifying cancellation.
+            if (creationAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(title);
+            }
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {

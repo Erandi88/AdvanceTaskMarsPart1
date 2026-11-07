@@ -151,10 +151,16 @@
     <None Update="TestData\ShareSkill\AddShareSkillWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\ShareSkill\CancelDeleteShareSkill.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\ShareSkill\CancelEditShareSkill.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\CancelShareSkill.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\DeleteShareSkillPersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\EditShareSkillTitleAndDescription.json">

@@ -362,4 +362,78 @@ public class ManageListingsPage
             ChangePage(NextButton);
         }
     }
+
+    public void CancelDeleteListing(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ArgumentException(
+                "A listing title is required.",
+                nameof(title)
+            );
+        }
+
+        if (!FindListingByTitle(title))
+        {
+            throw new InvalidOperationException(
+                $"Listing was not found: {title}"
+            );
+        }
+
+        var row = FindRowOnCurrentPage(title)
+            ?? throw new InvalidOperationException(
+                $"Listing row was not found: {title}"
+            );
+
+        // Open the deletion dialog for this listing.
+        row.FindElement(
+            By.XPath(
+                ".//button[i[" +
+                "contains(concat(' ', normalize-space(@class), ' '), ' remove ')" +
+                "]]"
+            )
+        ).Click();
+
+        var dialogLocator = By.CssSelector(
+            "div.ui.modal.visible.active"
+        );
+
+        var dialog = _wait.Until(
+            ExpectedConditions.ElementIsVisible(dialogLocator)
+        );
+
+        // Check the dialog identifies the intended listing.
+        bool correctHeading =
+            dialog.FindElement(By.CssSelector(".header"))
+                .Text.Trim() == "Delete Your Service";
+
+        bool correctTitle = dialog
+            .FindElements(By.CssSelector(".content p"))
+            .Any(element => element.Text.Trim() == title);
+
+        if (!correctHeading || !correctTitle)
+        {
+            throw new InvalidOperationException(
+                "The delete dialog did not identify the expected listing."
+            );
+        }
+
+        // Choose No and wait for the dialog to close.
+        _wait.Until(driver =>
+        {
+            var button = driver
+                .FindElement(dialogLocator)
+                .FindElement(By.CssSelector("button.ui.negative"));
+
+            return button.Displayed && button.Enabled
+                ? button
+                : null;
+        }).Click();
+
+        _wait.Until(
+            ExpectedConditions.InvisibilityOfElementLocated(
+                dialogLocator
+            )
+        );
+    }
 }
