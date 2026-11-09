@@ -1,0 +1,27 @@
+{
+  "keyword": "QA Location",
+  "matchingListing": {
+    "title": "Online Service",
+    "description": "I provide online Selenium browser automation practice.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  "nonMatchingListing": {
+    "title": "Onsite Service",
+    "description": "I provide on site Selenium browser automation practice.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "On-site",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  }
+}

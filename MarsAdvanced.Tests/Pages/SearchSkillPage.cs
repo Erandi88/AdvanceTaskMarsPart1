@@ -298,6 +298,30 @@ namespace MarsAdvanced.Tests.Pages
                 return false;
             }
         }
+
+        public void SelectLocationFilter(string filter)
+        {
+            if (filter != "Online" &&
+                filter != "Onsite" &&
+                filter != "ShowAll")
+            {
+                throw new ArgumentException(
+                    $"Unsupported location filter: {filter}",
+                    nameof(filter)
+                );
+            }
+
+            var buttonLocator = By.XPath(
+                "//div[contains(concat(' ', normalize-space(@class), ' '), " +
+                "' buttons ')]/button[normalize-space()='" + filter + "']"
+            );
+
+            _wait.Until(
+                ExpectedConditions.ElementToBeClickable(buttonLocator)
+            ).Click();
+
+            Console.WriteLine($"Location filter clicked: [{filter}]");
+        }
     }
 
 

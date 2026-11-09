@@ -118,6 +118,12 @@
     <None Update="TestData\ProfileSettings\UpdateHoursToMoreThan30PersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\SearchSkill\FilterSearchResultsByCategory.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\FilterSearchResultsByLocation.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\SearchSkill\FilterSearchResultsBySeleniumSubcategory.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
