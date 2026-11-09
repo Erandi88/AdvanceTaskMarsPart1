@@ -1,0 +1,27 @@
+{
+  "keyword": "QA Filter",
+  "matchingListing": {
+    "title": "Selenium Service",
+    "description": "I provide Selenium browser automation practice.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  "nonMatchingListing": {
+    "title": "API Service",
+    "description": "I provide API testing practice for reliable services.",
+    "category": "Test Automation",
+    "subcategory": "API Testing",
+    "tags": [ "API Testing" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "Selenium" ],
+    "activeStatus": "Active"
+  }
+}

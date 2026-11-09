@@ -118,6 +118,15 @@
     <None Update="TestData\ProfileSettings\UpdateHoursToMoreThan30PersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\SearchSkill\FilterSearchResultsBySeleniumSubcategory.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchSkillByTitleUsingEnter.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchSkillWithNoMatchingTitle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithCredit.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -229,6 +238,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="TestData\SearchSkill\" />
     <Folder Include="TestData\ShareSkill\" />
     <Folder Include="TestData\ProfileSettings\" />
     <Folder Include="TestData\Skill\" />
