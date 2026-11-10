@@ -3,6 +3,7 @@ using OpenQA.Selenium;
 using MarsAdvanced.Tests.Helpers;
 using MarsAdvanced.Tests.Models;
 using MarsAdvanced.Tests.Pages;
+using AventStack.ExtentReports;
 
 namespace MarsAdvanced.Tests;
 
@@ -11,10 +12,15 @@ public class ProfileSettingsTests
 {
     private IWebDriver? driver;
     private ProfileSettingsPage? profileSettingsPage;
+    private ExtentTest? reportTest;
 
     [SetUp]
     public void SetUp()
     {
+        reportTest = ExtentReportManager.CreateTest(
+            TestContext.CurrentContext.Test.FullName
+        );
+
         string? email =
             Environment.GetEnvironmentVariable("MARS_EMAIL");
 
@@ -945,8 +951,37 @@ public class ProfileSettingsTests
     [TearDown]
     public void TearDown()
     {
-        driver?.Dispose();
-        driver = null;
-        profileSettingsPage = null;
+        try
+        {
+            // Record the result and capture a screenshot if failed.
+            TestReportHelper.RecordResult(reportTest, driver);
+        }
+        finally
+        {
+            try
+            {
+                driver?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                reportTest?.Fail(
+                    "Browser disposal failed: " +
+                    System.Net.WebUtility.HtmlEncode(
+                        exception.Message
+                    )
+                );
+
+                throw;
+            }
+            finally
+            {
+                // Preserve the existing field cleanup.
+                driver = null;
+                profileSettingsPage = null;
+                reportTest = null;
+
+                ExtentReportManager.Flush();
+            }
+        }
     }
 }

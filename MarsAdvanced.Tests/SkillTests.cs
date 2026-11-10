@@ -1,9 +1,11 @@
-﻿using MarsAdvanced.Tests.Helpers;
+﻿using AventStack.ExtentReports;
+using MarsAdvanced.Tests.Helpers;
 using MarsAdvanced.Tests.Models;
 using MarsAdvanced.Tests.Pages;
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
+using AventStack.ExtentReports;
 
 namespace MarsAdvanced.Tests;
 
@@ -12,10 +14,16 @@ public class SkillTests
 {
     private IWebDriver? driver;
     private SkillPage? skillPage;
+    private ExtentTest? reportTest;
 
     [SetUp]
     public void SetUp()
     {
+        // Create the report entry before setup can fail.
+        reportTest = ExtentReportManager.CreateTest(
+            TestContext.CurrentContext.Test.FullName
+        );
+
         string? email =
             Environment.GetEnvironmentVariable("MARS_EMAIL");
 
@@ -1944,8 +1952,37 @@ public class SkillTests
     [TearDown]
     public void TearDown()
     {
-        driver?.Dispose();
-        driver = null;
-        skillPage = null;
+        try
+        {
+            // Record the result and capture a screenshot if failed.
+            TestReportHelper.RecordResult(reportTest, driver);
+        }
+        finally
+        {
+            try
+            {
+                driver?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                reportTest?.Fail(
+                    "Browser disposal failed: " +
+                    System.Net.WebUtility.HtmlEncode(
+                        exception.Message
+                    )
+                );
+
+                throw;
+            }
+            finally
+            {
+                // Preserve the existing field cleanup.
+                driver = null;
+                skillPage = null;
+                reportTest = null;
+
+                ExtentReportManager.Flush();
+            }
+        }
     }
 }

@@ -3,6 +3,8 @@ using MarsAdvanced.Tests.Models;
 using MarsAdvanced.Tests.Pages;
 using NUnit.Framework;
 using OpenQA.Selenium;
+using AventStack.ExtentReports;
+using NUnit.Framework.Interfaces;
 
 // Add the same model/helper using statements as ShareSkillTests.cs.
 
@@ -13,10 +15,16 @@ namespace MarsAdvanced.Tests
     public class SearchSkillTests
     {
         private IWebDriver? driver;
+        private ExtentTest? reportTest;
 
         [SetUp]
         public void SetUp()
         {
+            // Create the report entry before browser setup, so setup failures are recorded.
+            reportTest = ExtentReportManager.CreateTest(
+                TestContext.CurrentContext.Test.FullName
+            );
+
             string? email =
                 Environment.GetEnvironmentVariable("MARS_EMAIL");
 
@@ -608,8 +616,36 @@ namespace MarsAdvanced.Tests
         [TearDown]
         public void TearDown()
         {
-            driver?.Dispose();
-            driver = null;
+            try
+            {
+                // Record the result before closing the browser.
+                TestReportHelper.RecordResult(reportTest, driver);
+            }
+            finally
+            {
+                try
+                {
+                    driver?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    reportTest?.Fail(
+                        "Browser disposal failed: " +
+                        System.Net.WebUtility.HtmlEncode(
+                            exception.Message
+                        )
+                    );
+
+                    throw;
+                }
+                finally
+                {
+                    driver = null;
+                    reportTest = null;
+
+                    ExtentReportManager.Flush();
+                }
+            }
         }
     }
 }
