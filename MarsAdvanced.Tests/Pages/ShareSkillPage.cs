@@ -605,4 +605,30 @@ public class ShareSkillPage
         input.SendKeys(Keys.Tab);
     }
 
+    public bool IsFormErrorDisplayed(string expectedMessage)
+    {
+        try
+        {
+            return _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(By.CssSelector(".ns-box"))
+                        .Any(message =>
+                            message.Displayed &&
+                            message.Text.Trim() == expectedMessage
+                        );
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+        }
+        catch (WebDriverTimeoutException)
+        {
+            return false;
+        }
+    }
+
 }

@@ -1458,6 +1458,382 @@ public class ShareSkillTests
         }
     }
 
+    [Test]
+    [NonParallelizable]
+    public void AddShareSkillWithEmptyForm()
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "ShareSkill", "AddShareSkillWithEmptyForm.json"
+        );
+        
+        var data = JsonReader.Read<ValidationMessageData>(filePath);
+        
+        Assert.That(data.ExpectedMessage, Is.Not.Null.And.Not.Empty);
+        
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+        var titlesBefore = listings.GetAllListingTitles();
+        form.OpenShareSkill();
+        Assert.That(form.GetTitle(), Is.Empty);
+        Assert.That(form.GetDescription(), Is.Empty);
+
+        // Submit without filling any fields or changing defaults.
+        form.ClickSave();
+        Assert.That(
+            form.IsFormErrorDisplayed(data.ExpectedMessage),
+            Is.True,
+            "Submitting an empty form should display validation."
+        );
+        Assert.That(form.GetTitle(), Is.Empty);
+        Assert.That(form.GetDescription(), Is.Empty);
+
+        form.ClickCancel();
+        form.WaitForFormToClose();
+        listings.Open();
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+    }
+
+    [TestCase(
+        "AddShareSkillWithSpacesOnlyTitle.json",
+        "     ",
+        TestName = "ShareSkill_RejectsSpacesOnlyTitle"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithSpecialCharactersTitle.json",
+        "@#$%",
+        TestName = "ShareSkill_RejectsSpecialCharactersTitle"
+    )]
+    [NonParallelizable]
+    public void AddShareSkillWithInvalidTitle(
+    string jsonFileName,
+    string expectedInput)
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "ShareSkill", jsonFileName
+        );
+        
+        var data = JsonReader.Read<ShareSkillValidationData>(filePath);
+        
+        Assert.That(data.Title, Is.EqualTo(expectedInput));
+        Assert.That(data.ExpectedMessage, Is.Not.Null.And.Not.Empty);
+        
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+        var titlesBefore = listings.GetAllListingTitles();
+        form.OpenShareSkill();
+        form.FillForm(data, data.Title);
+
+        Assert.That(form.GetTitle(), Is.EqualTo(data.Title),
+            "The title should match the invalid input before Save.");
+        
+        form.ClickSave();
+        
+        Assert.That(
+            form.IsValidationMessageDisplayed(data.ExpectedMessage),
+            Is.True,
+            "The invalid title should be rejected."
+        );
+        
+        Assert.That(form.GetTitle(), Is.EqualTo(data.Title));
+
+        form.ClickCancel();
+        form.WaitForFormToClose();
+        listings.Open();
+        
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+    }
+
+
+    [TestCase(
+        "AddShareSkillWithSpacesOnlyDescription.json",
+        "     ",
+        TestName = "ShareSkill_RejectsSpacesOnlyDescription"
+    )]
+
+    [TestCase(
+        "AddShareSkillWithSpecialCharactersDescription.json",
+        "Selenium # and @ testing",
+        TestName = "ShareSkill_RejectsSpecialCharactersDescription"
+    )]
+
+    [NonParallelizable]
+    public void AddShareSkillWithInvalidDescription(string jsonFileName,string expectedInput)
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "ShareSkill", jsonFileName
+        );
+        
+        var data = JsonReader.Read<ShareSkillValidationData>(filePath);
+        
+        Assert.That(data.Description, Is.EqualTo(expectedInput));
+        Assert.That(data.ExpectedMessage, Is.Not.Null.And.Not.Empty);
+        
+        string title = $"{data.Title} {Guid.NewGuid():N}";
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+        var titlesBefore = listings.GetAllListingTitles();
+        try
+        {
+            form.OpenShareSkill();
+            form.FillForm(data, title);
+            
+            Assert.That(form.GetDescription(), Is.EqualTo(data.Description));
+            
+            form.ClickSave();
+            
+            Assert.That(form.IsValidationMessageDisplayed(data.ExpectedMessage),
+                Is.True, "The invalid description should be rejected.");
+
+            form.ClickCancel();
+            form.WaitForFormToClose();
+            listings.Open();
+            
+            Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+            
+            browser.Navigate().Refresh();
+            listings.Open();
+            
+            Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore));
+        }
+        finally
+        {
+            listings.Open();
+            listings.DeleteListingIfExists(title);
+        }
+    }
+
+    [TestCase(
+        "AddShareSkillWith99CharacterTitle.json",
+        TestName = "ShareSkill_Accepts99CharacterTitle"
+    )]
+
+    [TestCase(
+        "AddShareSkillWith100CharacterTitle.json",
+        TestName = "ShareSkill_Accepts100CharacterTitle"
+    )]
+
+    [TestCase(
+        "AddShareSkillWith101CharacterTitle.json",
+        TestName = "ShareSkill_Restricts101CharacterTitleTo100"
+    )]
+
+    [NonParallelizable]
+    public void AddShareSkillWithTitleBoundary(string jsonFileName)
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "ShareSkill", jsonFileName
+        );
+        
+        var data = JsonReader.Read<ShareSkillTitleBoundaryData>(filePath);
+        
+        Assert.That(data.InputTitleLength, Is.AnyOf(99, 100, 101));
+        Assert.That(data.ExpectedTitleLength,
+            Is.EqualTo(Math.Min(data.InputTitleLength, 100)));
+
+        string prefix = $"{data.Title} {Guid.NewGuid():N} ";
+        
+        Assert.That(prefix.Length, Is.LessThan(data.InputTitleLength));
+        
+        string attemptedTitle = prefix.PadRight(data.InputTitleLength, 'A');
+        string expectedTitle = attemptedTitle[..data.ExpectedTitleLength];
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+
+        listings.Open();
+        
+        Assert.That(listings.FindListingByTitle(expectedTitle), Is.False);
+        bool saveAttempted = false;
+        try
+        {
+            form.OpenShareSkill();
+            form.FillForm(data, attemptedTitle);
+            Assert.That(attemptedTitle.Length, Is.EqualTo(data.InputTitleLength));
+            Assert.That(form.GetTitle(), Is.EqualTo(expectedTitle),
+                "The title input should enforce its 100-character maximum.");
+
+            saveAttempted = true;
+            VerifySavedBoundaryTitle(browser, form, listings, expectedTitle);
+        }
+        finally
+        {
+            if (saveAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(expectedTitle);
+            }
+        }
+    }
+
+    //helper - AddShareSkillWithTitleBoundary()
+    private static void VerifySavedBoundaryTitle(IWebDriver browser, ShareSkillPage form, ManageListingsPage listings, string expectedTitle)
+    {
+        form.ClickSave();
+        form.WaitForSaveToComplete();
+
+        listings.Open();
+        Assert.That(
+            listings.FindListingByTitle(expectedTitle),
+            Is.True,
+            "The boundary listing should be saved."
+        );
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        Assert.That(
+            listings.FindListingByTitle(expectedTitle),
+            Is.True,
+            "The listing should remain after refresh."
+        );
+
+        listings.OpenListingForEdit(expectedTitle);
+        string savedTitle = form.GetTitle();
+
+        Assert.That(savedTitle, Is.EqualTo(expectedTitle),
+            "The complete saved title should match the expected text.");
+        Assert.That(savedTitle.Length, Is.EqualTo(expectedTitle.Length));
+
+        form.ClickCancel();
+        form.WaitForFormToClose();
+    }
+
+    //boundary -  description
+    [TestCase(
+        "AddShareSkillWith599CharacterDescription.json",
+        TestName = "ShareSkill_Accepts599CharacterDescription"
+    )]
+
+    [TestCase(
+        "AddShareSkillWith600CharacterDescription.json",
+        TestName = "ShareSkill_Accepts600CharacterDescription"
+    )]
+
+    [TestCase(
+        "AddShareSkillWith601CharacterDescription.json",
+        TestName = "ShareSkill_Restricts601CharacterDescriptionTo600"
+    )]
+
+    [NonParallelizable]
+    public void AddShareSkillWithDescriptionBoundary(string jsonFileName)
+    {
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "ShareSkill", jsonFileName
+        
+            );
+        var data = JsonReader.Read<ShareSkillDescriptionBoundaryData>(filePath);
+        
+        Assert.That(data.InputDescriptionLength, Is.AnyOf(599, 600, 601));
+        Assert.That(data.ExpectedDescriptionLength,
+            Is.EqualTo(Math.Min(data.InputDescriptionLength, 600)));
+        Assert.That(data.Description, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Description.Length, Is.LessThan(data.InputDescriptionLength));
+
+        string title = $"{data.Title} {Guid.NewGuid():N}";
+        
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+        
+        string attempted = data.Description.PadRight(data.InputDescriptionLength, 'A');
+        string expected = attempted[..data.ExpectedDescriptionLength];
+        data.Description = attempted;
+        var form = new ShareSkillPage(browser);
+        var listings = new ManageListingsPage(browser);
+        bool saveAttempted = false;
+
+        try
+        {
+            form.OpenShareSkill();
+            form.FillForm(data, title);
+            
+            Assert.That(attempted.Length, Is.EqualTo(data.InputDescriptionLength));
+            Assert.That(form.GetDescription(), Is.EqualTo(expected),
+                "The Description input should enforce its 600-character maximum.");
+            saveAttempted = true;
+            VerifySavedBoundaryDescription(browser, form, listings, title, expected);
+        }
+        finally
+        {
+            if (saveAttempted)
+            {
+                listings.Open();
+                listings.DeleteListingIfExists(title);
+            }
+        }
+    }
+
+    //Helper 
+    private static void VerifySavedBoundaryDescription(IWebDriver browser,
+    ShareSkillPage form,ManageListingsPage listings, string title, string expectedDescription)
+    {
+        form.ClickSave();
+        form.WaitForSaveToComplete();
+
+        listings.Open();
+        
+        Assert.That(
+            listings.FindListingByTitle(title),
+            Is.True,
+            "The boundary listing should be saved."
+        );
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        
+        Assert.That(
+            listings.FindListingByTitle(title),
+            Is.True,
+            "The listing should remain after refresh."
+        );
+
+        listings.OpenListingForEdit(title);
+        
+        Assert.That(form.GetTitle(), Is.EqualTo(title));
+        string savedDescription = form.GetDescription();
+
+        Assert.That(savedDescription, Is.EqualTo(expectedDescription),
+            "The complete saved Description should match the expected text.");
+        Assert.That(savedDescription.Length,
+            Is.EqualTo(expectedDescription.Length));
+
+        form.ClickCancel();
+        form.WaitForFormToClose();
+    }
+
+
     [TearDown]
     public void TearDown()
     {

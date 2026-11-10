@@ -613,6 +613,557 @@ namespace MarsAdvanced.Tests
             }
         }
 
+        [Test]
+        public void OpenSearchResultShowsCorrectListing()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill",
+                "OpenSearchResultShowsCorrectListing.json"
+            );
+            var data = JsonReader.Read<ShareSkillData>(filePath);
+            string title = $"{data.Title} {Guid.NewGuid():N}";
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            var detail = new ServiceDetailPage(browser);
+            bool saveAttempted = false;
+
+            try
+            {
+                form.OpenShareSkill();
+                form.FillForm(data, title);
+                saveAttempted = true;
+                SaveAndVerifyListing(form, listings, title);
+
+                search.SearchUsingEnter(title);
+                Assert.That(search.WaitForListingTitle(title), Is.True);
+                string expectedUrl = search.OpenListingByTitle(title);
+
+                Assert.That(detail.WaitForTitle(), Is.EqualTo(title),
+                    "The detail page should display the selected listing title.");
+                Assert.That(detail.GetUrl(), Is.EqualTo(expectedUrl),
+                    "The browser should open the selected result's destination.");
+
+                Assert.Multiple(() =>
+                {
+                    Assert.That(
+                        detail.GetCategory(),
+                        Is.EqualTo(data.Category),
+                        "The detail category should match the created listing."
+                    );
+
+                    Assert.That(
+                        detail.GetSubcategory(),
+                        Is.EqualTo(data.Subcategory),
+                        "The detail subcategory should match the created listing."
+                    );
+
+                    Assert.That(
+                        detail.GetLocationType(),
+                        Is.EqualTo(data.LocationType),
+                        "The detail location should match the created listing."
+                    );
+                });
+            }
+            finally
+            {
+                if (saveAttempted)
+                {
+                    listings.Open();
+                    listings.DeleteListingIfExists(title);
+                }
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void FilterSearchResultsByCombinedFilters()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill",
+                "FilterSearchResultsByCombinedFilters.json"
+            );
+
+            var data = JsonReader.Read<List<ShareSkillData>>(filePath);
+
+            Assert.That(data, Has.Count.EqualTo(4));
+
+            string keyword = $"QA Combined {Guid.NewGuid():N}";
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            var attemptedTitles = new List<string>();
+
+            try
+            {
+                foreach (var item in data)
+                {
+                    string title = $"{keyword} {item.Title}";
+                    form.OpenShareSkill();
+                    form.FillForm(item, title);
+                    attemptedTitles.Add(title);
+                    SaveAndVerifyListing(form, listings, title);
+                }
+
+                VerifyCombinedSearchFilters(search, keyword, attemptedTitles);
+            }
+            finally
+            {
+                listings.Open();
+                foreach (string title in attemptedTitles)
+                    listings.DeleteListingIfExists(title);
+            }
+        }
+
+        //Helper - FilterSearchResultsByCombinedFilters()
+        private static void VerifyCombinedSearchFilters(SearchSkillPage search, string keyword, List<string> titles)
+        {
+            search.SearchUsingEnter(keyword);
+            Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword));
+            Assert.That(
+                search.WaitForResultTitles(titles.ToArray()),
+                Is.True,
+                "All four setup listings should appear before filtering."
+            );
+
+            search.SelectTestAutomationCategory();
+            Assert.That(
+                search.WaitForResultTitles(titles[0], titles[1], titles[2]),
+                Is.True,
+                "Category filtering should exclude the Programming listing."
+            );
+
+            search.SelectSeleniumSubcategory();
+            Assert.That(
+                search.WaitForResultTitles(titles[0], titles[1]),
+                Is.True,
+                "Subcategory filtering should exclude the API Testing listing."
+            );
+
+            search.SelectLocationFilter("Onsite");
+            Assert.That(
+                search.WaitForResultTitles(titles[0]),
+                Is.True,
+                "Only the On-site Selenium listing should remain."
+            );
+
+            search.SelectLocationFilter("ShowAll");
+            Assert.That(
+                search.WaitForResultTitles(titles[0], titles[1]),
+                Is.True,
+                "ShowAll should restore both locations within Selenium."
+            );
+        }
+
+        [TestCase(
+            "SearchCategoryWithNoMatchingListings.json",
+            "Software Development",
+            "",
+            TestName = "SearchSkill_EmptyCategoryResults"
+        )]
+
+        [TestCase(
+            "SearchSubcategoryWithNoMatchingListings.json",
+            "Test Automation",
+            "API Testing",
+            TestName = "SearchSkill_EmptySubcategoryResults"
+        )]
+
+        [NonParallelizable]
+        public void SearchFilterWithNoMatchingListings(string jsonFileName, string category, string subcategory)
+        {
+            Console.WriteLine("Category : "+category);
+            Console.WriteLine("Sub-category : " + subcategory);
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+            
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill", jsonFileName
+            );
+            
+            var data = JsonReader.Read<ShareSkillData>(filePath);
+            
+            Assert.That(data.Category, Is.EqualTo("Test Automation"));
+            Assert.That(data.Subcategory, Is.EqualTo("Selenium"));
+            Assert.That(data.ActiveStatus, Is.EqualTo("Active"));
+            
+            string title = $"{data.Title} {Guid.NewGuid():N}";
+            
+            Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            bool saveAttempted = false;
+
+            try
+            {
+                form.OpenShareSkill();
+                form.FillForm(data, title);
+                saveAttempted = true;
+                SaveAndVerifyListing(form, listings, title);
+                search.SearchUsingEnter(title);
+                
+                Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(title));
+                Assert.That(search.WaitForResultTitles(title), Is.True);
+                
+                VerifyEmptySearchFilter(search, category, subcategory, title);
+            }
+            finally
+            {
+                if (saveAttempted)
+                {
+                    listings.Open();
+                    listings.DeleteListingIfExists(title);
+                }
+            }
+        }
+
+        private static void VerifyEmptySearchFilter(SearchSkillPage search, string category,string subcategory,string title)
+        {
+            search.SelectCategory(category);
+
+            if (!string.IsNullOrEmpty(subcategory))
+            {
+                Assert.That(
+                    search.WaitForResultTitles(title),
+                    Is.True,
+                    "The Selenium listing should remain under Test Automation."
+                );
+
+                search.SelectSubcategory(subcategory);
+            }
+
+            Assert.That(
+                search.WaitForNoResults(),
+                Is.True,
+                "The selected filter should display the empty-results message."
+            );
+
+            Assert.That(
+                search.GetVisibleResultTitles(),
+                Is.Empty,
+                "No listing cards should remain."
+            );
+        }
+
+
+        [TestCase(
+            "SearchPaginationWith9ResultsPerPage.json",
+            TestName = "SearchSkill_PaginationWith9ResultsPerPage"
+        )]
+
+        [TestCase(
+            "SearchWith12ResultsPerPage.json",
+            TestName = "SearchSkill_12ResultsPerPage"
+        )]
+
+        [TestCase(
+            "SearchWith18ResultsPerPage.json",
+            TestName = "SearchSkill_18ResultsPerPage"
+        )]
+
+        [NonParallelizable]
+        public void SearchResultsPagination(string jsonFileName)
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+            
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill", jsonFileName
+            );
+            var data = JsonReader.Read<SearchPaginationData>(filePath);
+            
+            Assert.That(data.ListingCount, Is.EqualTo(12));
+            Assert.That(data.PageSize, Is.AnyOf(9, 12, 18));
+            Assert.That(data.Listing.ActiveStatus, Is.EqualTo("Active"));
+            
+            string keyword = $"{data.Listing.Title} {Guid.NewGuid():N}";
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            var attemptedTitles = new List<string>();
+
+            try
+            {
+                CreatePaginationListings(form, listings, data, keyword, attemptedTitles);
+                search.SearchUsingEnter(keyword);
+                
+                Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword));
+                search.SelectResultsPerPage(data.PageSize);
+                
+                VerifySearchPagination(search, attemptedTitles, data.PageSize);
+            }
+            finally
+            {
+                listings.Open();
+                RemovePaginationListings(listings, attemptedTitles);
+            }
+        }
+
+        //helper - creates the test listings using your existing save helper
+
+        private void CreatePaginationListings(ShareSkillPage form,ManageListingsPage listings,
+            SearchPaginationData data, string keyword,List<string> attemptedTitles)
+        {
+            for (int number = 1; number <= data.ListingCount; number++)
+            {
+                string title = $"{keyword} {number:D2}";
+                Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+
+                form.OpenShareSkill();
+                form.FillForm(data.Listing, title);
+                attemptedTitles.Add(title);
+                SaveAndVerifyListing(form, listings, title);
+            }
+        }
+
+        //helper - verifies the results and navigation
+        private static void VerifySearchPagination(SearchSkillPage search, List<string> expectedTitles,int pageSize)
+        {
+            var firstPage = search.WaitForVisibleResultCount(
+                Math.Min(pageSize, expectedTitles.Count)
+            );
+            Assert.That(search.GetCurrentResultsPage(), Is.EqualTo(1));
+
+            if (pageSize == 9)
+            {
+                Assert.That(search.IsNextResultsPageDisabled(), Is.False);
+                search.GoToNextResultsPage();
+                var secondPage = search.WaitForVisibleResultCount(3);
+
+                Assert.That(search.GetCurrentResultsPage(), Is.EqualTo(2));
+                Assert.That(search.IsNextResultsPageDisabled(), Is.True);
+                Assert.That(firstPage.Intersect(secondPage), Is.Empty,
+                    "The two pages must not repeat any listing.");
+                Assert.That(firstPage.Concat(secondPage),
+                    Is.EquivalentTo(expectedTitles),
+                    "Both pages together must contain exactly the 12 test listings.");
+
+                search.GoToPreviousResultsPage();
+                Assert.That(search.GetCurrentResultsPage(), Is.EqualTo(1));
+                Assert.That(search.WaitForResultTitles(firstPage.ToArray()), Is.True,
+                    "Returning should restore the original first-page results.");
+                Assert.That(search.IsNextResultsPageDisabled(), Is.False);
+            }
+            else
+            {
+                Assert.That(firstPage, Is.EquivalentTo(expectedTitles),
+                    "All 12 listings should fit on one page.");
+                Assert.That(search.IsNextResultsPageDisabled(), Is.True,
+                    "A second page should not be available.");
+            }
+        }
+
+        //helper - cleanup
+        private static void RemovePaginationListings( ManageListingsPage listings,List<string> attemptedTitles)
+        {
+            var failures = new List<Exception>();
+
+            foreach (string title in attemptedTitles)
+            {
+                try
+                {
+                    listings.DeleteListingIfExists(title);
+                }
+                catch (Exception exception)
+                {
+                    failures.Add(new InvalidOperationException(
+                        $"Cleanup failed for listing '{title}'.",
+                        exception
+                    ));
+                }
+            }
+
+            if (failures.Count > 0)
+            {
+                throw new AggregateException(
+                    "Some pagination test listings could not be removed.",
+                    failures
+                );
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void SearchSkillByTitleUsingIcon()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill", "SearchSkillByTitleUsingIcon.json"
+            );
+
+            var data = JsonReader.Read<ShareSkillData>(filePath);
+            
+            Assert.That(data.ActiveStatus, Is.EqualTo("Active"));
+            
+            string title = $"{data.Title} {Guid.NewGuid():N}";
+            Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+            
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            bool saveAttempted = false;
+
+            try
+            {
+                form.OpenShareSkill();
+                form.FillForm(data, title);
+                saveAttempted = true;
+                SaveAndVerifyListing(form, listings, title);
+
+                search.SearchUsingIcon(title);
+                Assert.That(
+                    search.GetSubmittedKeyword(),
+                    Is.EqualTo(title),
+                    "Clicking the search icon should submit the entered keyword."
+                );
+                Assert.That(
+                    search.WaitForResultTitles(title),
+                    Is.True,
+                    "Searching the unique title should return only that listing."
+                );
+            }
+            finally
+            {
+                if (saveAttempted)
+                {
+                    listings.Open();
+                    listings.DeleteListingIfExists(title);
+                }
+            }
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void SearchSkillWithNoMatchingTitleUsingIcon()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill",
+                "SearchSkillWithNoMatchingTitleUsingIcon.json"
+            );
+
+            var data = JsonReader.Read<SearchSkillData>(filePath);
+            Assert.That(data.Keyword, Is.Not.Null.And.Not.Empty);
+            string keyword = $"{data.Keyword} {Guid.NewGuid():N}";
+
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            listings.Open();
+
+            search.SearchUsingIcon(keyword);
+
+            Assert.That(
+                search.GetSubmittedKeyword(),
+                Is.EqualTo(keyword),
+                "The search icon should submit the unmatched keyword."
+            );
+
+            Assert.That(
+                search.WaitForNoResults(),
+                Is.True,
+                "An unmatched keyword should display the empty-results message."
+            );
+
+            Assert.That(
+                search.GetVisibleResultTitles(),
+                Is.Empty,
+                "An unmatched keyword should return no listing cards."
+            );
+        }
+
+        [Test]
+        [NonParallelizable]
+        public void BrowseAllCategoriesShowsCorrectCount()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill", "BrowseAllCategories.json"
+            );
+            var data = JsonReader.Read<SearchBrowseData>(filePath);
+            Assert.That(data.PageSize, Is.EqualTo(18));
+
+            var search = new SearchSkillPage(browser);
+            search.OpenSearchWithoutKeyword();
+            search.SelectAllCategories();
+            search.SelectLocationFilter("ShowAll");
+            search.SelectResultsPerPage(data.PageSize);
+
+            Assert.That(search.GetSubmittedKeyword(), Is.Empty);
+            int displayedTotal = search.GetAllCategoriesCount();
+            int actualTotal = CountAllSearchResults(
+                search, displayedTotal, data.PageSize
+            );
+
+            Console.WriteLine($"All Categories displayed total: {displayedTotal}");
+            Console.WriteLine($"Actual result cards across all pages: {actualTotal}");
+
+            Assert.That(
+                actualTotal,
+                Is.EqualTo(displayedTotal),
+                "The displayed total should match the actual result-card count."
+            );
+            Assert.That(search.GetAllCategoriesCount(), Is.EqualTo(displayedTotal),
+                "The displayed total should remain stable during pagination.");
+        }
+
+        //Helper - all category search
+        private static int CountAllSearchResults(SearchSkillPage search,int displayedTotal,int pageSize)
+        {
+            Assert.That(displayedTotal, Is.GreaterThanOrEqualTo(0));
+
+            if (displayedTotal == 0)
+            {
+                Assert.That(search.WaitForNoResults(), Is.True);
+                Assert.That(search.GetVisibleResultTitles(), Is.Empty);
+                return 0;
+            }
+
+            Assert.That(search.GetCurrentResultsPage(), Is.EqualTo(1));
+            int pageCount = (displayedTotal + pageSize - 1) / pageSize;
+            int actualTotal = 0;
+
+            for (int page = 1; page <= pageCount; page++)
+            {
+                int expectedOnPage = Math.Min(
+                    pageSize, displayedTotal - actualTotal
+                );
+                var results = search.WaitForVisibleResultCount(expectedOnPage);
+                Assert.That(search.GetCurrentResultsPage(), Is.EqualTo(page));
+                actualTotal += results.Count;
+
+                bool isLastPage = page == pageCount;
+                Assert.That(
+                    search.IsNextResultsPageDisabled(),
+                    Is.EqualTo(isLastPage),
+                    $"Next-button state should be correct on page {page}."
+                );
+
+                if (!isLastPage)
+                    search.GoToNextResultsPage();
+            }
+
+            return actualTotal;
+        }
+
         [TearDown]
         public void TearDown()
         {

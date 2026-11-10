@@ -1,0 +1,13 @@
+{
+  "title": "@#$%",
+  "description": "I provide Selenium practice for browser automation.",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active",
+  "expectedMessage": "First character must be an alphabet character or a number."
+}

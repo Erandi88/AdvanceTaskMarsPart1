@@ -208,6 +208,8 @@ public class ManageListingsPage
 
     private void DeleteListingOnCurrentPage(string title)
     {
+        WaitForNotificationsToDisappear();
+
         var row = FindRowOnCurrentPage(title)
             ?? throw new NoSuchElementException(
                 $"Listing '{title}' is no longer on the current page."
@@ -285,6 +287,22 @@ public class ManageListingsPage
                 $"Listing '{title}' still exists after deletion."
             );
         }
+    }
+
+    private void WaitForNotificationsToDisappear()
+    {
+        _wait.Until(driver =>
+        {
+            try
+            {
+                return driver.FindElements(By.CssSelector(".ns-box"))
+                    .All(notification => !notification.Displayed);
+            }
+            catch (StaleElementReferenceException)
+            {
+                return false;
+            }
+        });
     }
 
     // Open the edit form for the exact test listing.

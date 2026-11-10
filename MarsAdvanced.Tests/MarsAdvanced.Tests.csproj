@@ -86,6 +86,9 @@
     <None Update="TestData\Language\EditLanguageWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Notification\OpenEmptyNotificationMenu.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\ProfileSettings\CloseAvailabilityWithoutChanges.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -119,7 +122,13 @@
     <None Update="TestData\ProfileSettings\UpdateHoursToMoreThan30PersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\SearchSkill\BrowseAllCategories.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\SearchSkill\FilterSearchResultsByCategory.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\FilterSearchResultsByCombinedFilters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\SearchSkill\FilterSearchResultsByLocation.json">
@@ -128,16 +137,61 @@
     <None Update="TestData\SearchSkill\FilterSearchResultsBySeleniumSubcategory.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\SearchSkill\OpenSearchResultShowsCorrectListing.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchCategoryWithNoMatchingListings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchPaginationWith9ResultsPerPage.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\SearchSkill\SearchSkillByTitleUsingEnter.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\SearchSkill\SearchSkillByTitleUsingIcon.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\SearchSkill\SearchSkillWithNoMatchingTitle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchSkillWithNoMatchingTitleUsingIcon.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchSubcategoryWithNoMatchingListings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchWith12ResultsPerPage.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\SearchSkill\SearchWith18ResultsPerPage.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith100CharacterTitle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith101CharacterTitle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith599CharacterDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith600CharacterDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith601CharacterDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWith99CharacterTitle.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithCredit.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithEmptyDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithEmptyForm.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithEmptyTitle.json">
@@ -162,6 +216,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithOnSiteLocation.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithSpacesOnlyDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithSpacesOnlyTitle.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithSpecialCharactersDescription.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\ShareSkill\AddShareSkillWithSpecialCharactersTitle.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\ShareSkill\AddShareSkillWithValidDetails.json">
@@ -192,6 +258,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\Skill\AddDuplicateSkillWithSameLevel.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\AddFifthSkillWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\Skill\AddSkillPersistsAfterRefresh.json">
@@ -245,6 +314,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="TestData\Notification\" />
     <Folder Include="TestData\SearchSkill\" />
     <Folder Include="TestData\ShareSkill\" />
     <Folder Include="TestData\ProfileSettings\" />

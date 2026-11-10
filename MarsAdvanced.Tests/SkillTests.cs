@@ -1949,6 +1949,104 @@ public class SkillTests
         }
     }
 
+    [Test]
+    [NonParallelizable]
+    public void AddFifthSkillWithValidDetails()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "AddFifthSkillWithValidDetails.json"
+        );
+        
+        var skills = JsonReader.Read<List<SkillData>>(filePath);
+        ValidateFiveNewSkills(page, skills);
+        int countBefore = page.GetSkillRowCount();
+        var attemptedSkills = new List<SkillData>();
+
+        try
+        {
+            foreach (var skill in skills)
+            {
+                attemptedSkills.Add(skill);
+                page.AddSkill(skill.Skill, skill.Level);
+                Assert.That(
+                    page.WaitForSkillRowCount(countBefore + attemptedSkills.Count),
+                    Is.True,
+                    $"Adding {skill.Skill} should increase the row count."
+                );
+            }
+
+            VerifyFiveSkills(page, skills, countBefore + 5);
+            browser.Navigate().Refresh();
+            page.ClickSkillsTab();
+            VerifyFiveSkills(page, skills, countBefore + 5);
+        }
+        finally
+        {
+            foreach (var skill in attemptedSkills)
+                page.DeleteSkillIfExists(skill.Skill);
+        }
+    }
+
+    //Helpers
+    private static void ValidateFiveNewSkills(SkillPage page, List<SkillData> skills)
+    {
+        Assert.That(skills, Has.Count.EqualTo(5));
+
+        foreach (var skill in skills)
+        {
+            Assert.That(skill.Skill, Is.Not.Null.And.Not.Empty);
+            Assert.That(skill.Level, Is.Not.Null.And.Not.Empty);
+        }
+
+        Assert.That(
+            skills.Select(skill => skill.Skill)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            Is.EqualTo(5),
+            "The JSON must contain five different skill names."
+        );
+
+        foreach (var skill in skills)
+        {
+            Assert.That(
+                page.IsSkillDisplayed(skill.Skill),
+                Is.False,
+                $"Setup requires {skill.Skill} to be absent."
+            );
+        }
+    }
+
+    private static void VerifyFiveSkills(SkillPage page, List<SkillData> skills,
+    int expectedCount)
+    {
+        Assert.That(
+            page.WaitForSkillRowCount(expectedCount),
+            Is.True,
+            "All five added records should remain."
+        );
+
+        foreach (var skill in skills)
+        {
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(skill.Skill, skill.Level),
+                Is.True,
+                $"{skill.Skill} should retain its saved level."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(skill.Skill),
+                Is.EqualTo(1),
+                $"{skill.Skill} should appear exactly once."
+            );
+        }
+    }
+
     [TearDown]
     public void TearDown()
     {

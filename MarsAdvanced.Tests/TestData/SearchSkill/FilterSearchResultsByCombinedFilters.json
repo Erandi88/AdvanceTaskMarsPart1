@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Match",
+    "description": "Selenium service provided on site.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "On-site",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  {
+    "title": "Online",
+    "description": "Selenium service provided online.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  {
+    "title": "Other subcategory",
+    "description": "API testing service provided on site.",
+    "category": "Test Automation",
+    "subcategory": "API Testing",
+    "tags": [ "API Testing" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "On-site",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "Selenium" ],
+    "activeStatus": "Active"
+  },
+  {
+    "title": "Other category",
+    "description": "Programming service provided on site.",
+    "category": "Software Development",
+    "subcategory": "Programming",
+    "tags": [ "Programming" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "On-site",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "Selenium" ],
+    "activeStatus": "Active"
+  }
+]

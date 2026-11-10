@@ -1,0 +1,22 @@
+[
+  {
+    "skill": "Selenium",
+    "level": "Intermediate"
+  },
+  {
+    "skill": "Postman",
+    "level": "Beginner"
+  },
+  {
+    "skill": "SQL",
+    "level": "Intermediate"
+  },
+  {
+    "skill": "Cucumber",
+    "level": "Beginner"
+  },
+  {
+    "skill": "JMeter",
+    "level": "Beginner"
+  }
+]
