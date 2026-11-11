@@ -8,6 +8,7 @@ namespace MarsAdvanced.Tests.Models
 {
     public class DuplicateLanguageEditData : EditLanguageData
     {
+        public string ExistingLanguage { get; set; } = string.Empty;
         public string ExistingLevel { get; set; } = string.Empty;
     }
 }
