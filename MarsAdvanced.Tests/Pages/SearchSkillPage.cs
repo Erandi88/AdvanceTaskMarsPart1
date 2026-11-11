@@ -618,6 +618,50 @@ namespace MarsAdvanced.Tests.Pages
 
             return int.Parse(count.Text.Trim());
         }
+
+        public bool IsCategorySelected(string category)
+        {
+            return IsSearchFilterSelected("category", category);
+        }
+
+        public bool IsSubcategorySelected(string subcategory)
+        {
+            return IsSearchFilterSelected("subcategory", subcategory);
+        }
+
+        private bool IsSearchFilterSelected(string filterClass, string text)
+        {
+            var locator = By.XPath(
+                "//a[@role='listitem' and " +
+                "contains(concat(' ', normalize-space(@class), ' '), " +
+                $"' {filterClass} ')]" +
+                $"[.//text()[normalize-space()={XPathLiteral(text)}]]"
+            );
+
+            try
+            {
+                return _wait.Until(driver =>
+                {
+                    try
+                    {
+                        return driver.FindElements(locator).Any(element =>
+                            element.Displayed &&
+                            (element.GetAttribute("class") ?? string.Empty)
+                                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                .Contains("active")
+                        );
+                    }
+                    catch (StaleElementReferenceException)
+                    {
+                        return false;
+                    }
+                });
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
+        }
     }
 
 }

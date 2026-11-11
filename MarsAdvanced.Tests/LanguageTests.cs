@@ -1759,6 +1759,12 @@ public class LanguageTests
                 "Add New should be unavailable at four records."
             );
 
+            Assert.That(
+                page.IsLanguageAddFormVisible(),
+                Is.False,
+                "The Add form should not be open when all four slots are filled."
+            );
+
             // Act: edit an existing record while the list is full.
             attemptedLanguages.Add(edit.UpdatedLanguage);
 
@@ -1799,6 +1805,12 @@ public class LanguageTests
                 page.IsAddNewButtonDisplay(),
                 Is.False,
                 "Add New should remain unavailable."
+            );
+
+            Assert.That(
+                page.IsLanguageAddFormVisible(),
+                Is.False,
+                "The Add form should not be open when all four slots are filled."
             );
 
             // Check the other three records.
@@ -2257,6 +2269,431 @@ public class LanguageTests
             {
                 page.DeleteLanguageIfExists(language);
             }
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void AddLanguageRejectsSpacesOnlyName()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "AddLanguageWithSpacesOnlyName.json"
+        );
+        var data = JsonReader.Read<LanguageData>(filePath);
+
+        Assert.That(data.Language, Is.EqualTo(new string(' ', 5)));
+        Assert.That(data.Level, Is.EqualTo("Basic"));
+        Assert.That(page.GetLanguageRowCount(), Is.Zero,
+            "This scenario requires an empty Languages table; preserve existing data.");
+        bool addAttempted = false;
+
+        try
+        {
+            page.ClickAddNewButton();
+            page.EnterLanguage(data.Language);
+            page.SelectLanguageLevel(data.Level);
+            Assert.That(page.GetLanguageFieldValue(), Is.EqualTo(data.Language),
+                "The input must contain exactly five spaces.");
+
+            addAttempted = true;
+            page.ClickAddAndWaitForResponse();
+            Assert.That(page.GetLanguageRowCount(), Is.Zero,
+                "Defect: submitting five spaces created a blank-looking language record.");
+
+            browser.Navigate().Refresh();
+            Assert.That(page.IsAddNewButtonAvailable(), Is.True);
+            Assert.That(page.GetLanguageRowCount(), Is.Zero,
+                "No language record should exist after refresh.");
+        }
+        catch
+        {
+            CaptureLanguageFailureBeforeCleanup(browser);
+            throw;
+        }
+        finally
+        {
+            if (addAttempted)
+                page.DeleteOnlyBlankLanguageIfExists();
+        }
+    }
+
+    //Helper
+    private void CaptureLanguageFailureBeforeCleanup(IWebDriver browser, string caption = "Failure state before language cleanup")
+    {
+        try
+        {
+            if (browser is ITakesScreenshot screenshotDriver)
+            {
+                string screenshot = screenshotDriver
+                    .GetScreenshot().AsBase64EncodedString;
+
+                reportTest?.AddScreenCaptureFromBase64String(
+                    screenshot,
+                    caption
+                );
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(
+                $"Could not capture the failure screenshot: {exception.Message}"
+            );
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void LanguageRowsShowEditAndDeleteIcons()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "LanguageRowsShowEditAndDeleteIcons.json"
+        );
+        var data = JsonReader.Read<List<LanguageData>>(filePath);
+
+        ValidateLanguageIconSetup(page, data);
+
+        int countBefore = page.GetLanguageRowCount();
+        var attemptedLanguages = new List<string>();
+
+        try
+        {
+            foreach (var item in data)
+            {
+                attemptedLanguages.Add(item.Language);
+                page.AddLanguage(item.Language, item.Level);
+                Assert.That(
+                    page.IsLanguageAndLevelDisplayed(item.Language, item.Level),
+                    Is.True,
+                    $"Setup should create {item.Language} with its selected level."
+                );
+            }
+
+            Assert.That(
+                page.WaitForLanguageRowCount(countBefore + data.Count),
+                Is.True
+            );
+            Assert.That(
+                page.WaitForLanguageRowIcons(countBefore + data.Count),
+                Is.True,
+                "Every Language row should show exactly one Edit and one Delete icon."
+            );
+        }
+        finally
+        {
+            foreach (string language in attemptedLanguages)
+                page.DeleteLanguageIfExists(language);
+        }
+    }
+
+    private static void ValidateLanguageIconSetup(
+    LanguagePage page,
+    List<LanguageData> data)
+    {
+        Assert.That(data, Has.Count.EqualTo(2));
+        Assert.That(
+            data.Select(item => item.Language)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            Is.EqualTo(2)
+        );
+        Assert.That(page.GetLanguageRowCount(), Is.LessThanOrEqualTo(2),
+            "This test needs two free language slots.");
+
+        foreach (var item in data)
+        {
+            Assert.That(item.Language, Is.Not.Null.And.Not.Empty);
+            Assert.That(item.Level, Is.Not.Null.And.Not.Empty);
+            Assert.That(page.IsLanguageDisplayed(item.Language), Is.False,
+                $"{item.Language} must not already exist; preserve existing data.");
+        }
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void UpdateLanguageWithoutChanges()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "UpdateLanguageWithoutChanges.json"
+        );
+        var data = JsonReader.Read<LanguageData>(filePath);
+        Assert.That(data.Language, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Level, Is.Not.Null.And.Not.Empty);
+        int countBefore = page.GetLanguageRowCount();
+        Assert.That(countBefore, Is.LessThan(4));
+        Assert.That(page.IsLanguageDisplayed(data.Language), Is.False);
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddLanguage(data.Language, data.Level);
+            Assert.That(page.IsLanguageAndLevelDisplayed(
+                data.Language, data.Level), Is.True);
+            Assert.That(page.WaitForLanguageRowCount(countBefore + 1), Is.True);
+
+            page.ClickEditLanguage(data.Language);
+            Assert.That(page.GetLanguageFieldValue(), Is.EqualTo(data.Language));
+            Assert.That(page.GetSelectedLanguageLevel(), Is.EqualTo(data.Level));
+
+            string response = page.SubmitLanguageUpdateAndWaitForResponse();
+            VerifyUnchangedLanguageUpdate(browser, page, data, countBefore, response);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                browser.Navigate().Refresh();
+                page.DeleteLanguageIfExists(data.Language);
+            }
+        }
+    }
+
+    private void VerifyUnchangedLanguageUpdate(
+    IWebDriver browser,
+    LanguagePage page,
+    LanguageData data,
+    int countBefore,
+    string response)
+    {
+        bool duplicateReported = response.Contains(
+            "This language is already added to your language list",
+            StringComparison.OrdinalIgnoreCase
+        );
+
+        Console.WriteLine($"Unchanged Update response: [{response}]");
+
+        if (duplicateReported)
+            CaptureLanguageFailureBeforeCleanup(browser);
+
+        browser.Navigate().Refresh();
+        bool originalRetained = page.IsLanguageAndLevelDisplayed(
+            data.Language, data.Level
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalRetained, Is.True,
+                "The original language and level should persist after refresh.");
+            Assert.That(page.GetLanguageRecordCount(data.Language), Is.EqualTo(1),
+                "Updating unchanged values must not create a duplicate.");
+            Assert.That(page.GetLanguageRowCount(), Is.EqualTo(countBefore + 1),
+                "Updating unchanged values must preserve the total row count.");
+            Assert.That(duplicateReported, Is.False,
+                "Defect: an unchanged record was incorrectly reported as a duplicate.");
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void EditLanguageRejectsSpacesOnlyName()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "EditLanguageWithSpacesOnlyName.json"
+        );
+        var data = JsonReader.Read<EditLanguageData>(filePath);
+
+        Assert.That(data.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.OriginalLevel, Is.EqualTo("Basic"));
+        Assert.That(data.UpdatedLanguage, Is.EqualTo(new string(' ', 5)));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+        Assert.That(page.GetLanguageRowCount(), Is.Zero,
+            "This scenario requires an empty Languages table.");
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddLanguage(data.OriginalLanguage, data.OriginalLevel);
+            Assert.That(page.IsLanguageAndLevelDisplayed(
+                data.OriginalLanguage, data.OriginalLevel), Is.True);
+
+            page.ClickEditLanguage(data.OriginalLanguage);
+            page.EnterLanguage(data.UpdatedLanguage);
+            Assert.That(page.GetLanguageFieldValue(), Is.EqualTo(data.UpdatedLanguage));
+            Assert.That(page.GetSelectedLanguageLevel(), Is.EqualTo(data.OriginalLevel));
+
+            string response = page.SubmitLanguageUpdateAndWaitForResponse();
+            Console.WriteLine($"Spaces-only edit response: [{response}]");
+            CaptureLanguageFailureBeforeCleanup(
+                browser, "Language state after spaces-only Update, before cleanup");
+            VerifySpacesOnlyLanguageEdit(browser, page, data);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                browser.Navigate().Refresh();
+                page.DeleteLanguageIfExists(data.OriginalLanguage);
+                page.DeleteOnlyBlankLanguageIfExists();
+            }
+        }
+    }
+
+    private static void VerifySpacesOnlyLanguageEdit(
+    IWebDriver browser,
+    LanguagePage page,
+    EditLanguageData data)
+    {
+        browser.Navigate().Refresh();
+
+        bool originalRetained = page.IsLanguageAndLevelDisplayed(
+            data.OriginalLanguage,
+            data.OriginalLevel
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                originalRetained,
+                Is.True,
+                "The invalid edit must preserve the original language and level."
+            );
+
+            Assert.That(
+                page.GetLanguageRecordCount(data.OriginalLanguage),
+                Is.EqualTo(1),
+                "Exactly one original language record should remain."
+            );
+
+            Assert.That(
+                page.GetLanguageRowCount(),
+                Is.EqualTo(1),
+                "The invalid edit must not add or remove records."
+            );
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void EditLanguageRejectsExistingNameWithDifferentLevel()
+    {
+        var page = languagePage
+            ?? throw new InvalidOperationException("Language page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language",
+            "EditLanguageToExistingNameWithDifferentLevel.json"
+        );
+        var data = JsonReader.Read<DuplicateLanguageEditData>(filePath);
+        ValidateDifferentLevelDuplicateSetup(page, data);
+        int countBefore = page.GetLanguageRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddLanguage(data.OriginalLanguage, data.OriginalLevel);
+            Assert.That(page.IsLanguageAndLevelDisplayed(
+                data.OriginalLanguage, data.OriginalLevel), Is.True);
+            page.AddLanguage(data.UpdatedLanguage, data.ExistingLevel);
+            Assert.That(page.IsLanguageAndLevelDisplayed(
+                data.UpdatedLanguage, data.ExistingLevel), Is.True);
+            Assert.That(page.WaitForLanguageRowCount(countBefore + 2), Is.True);
+
+            page.ClickEditLanguage(data.OriginalLanguage);
+            page.EnterLanguage(data.UpdatedLanguage);
+            page.SelectLanguageLevel(data.UpdatedLevel);
+            Assert.That(page.GetLanguageFieldValue(), Is.EqualTo(data.UpdatedLanguage));
+            Assert.That(page.GetSelectedLanguageLevel(), Is.EqualTo(data.UpdatedLevel));
+
+            string response = page.SubmitLanguageUpdateAndWaitForResponse();
+            Console.WriteLine($"Different-level duplicate edit response: [{response}]");
+            CaptureLanguageFailureBeforeCleanup(
+                browser, "Different-level duplicate edit before refresh and cleanup");
+            VerifyDifferentLevelDuplicateRejected(browser, page, data, countBefore);
+        }
+        finally
+        {
+            if (creationAttempted)
+                CleanupDifferentLevelDuplicate(browser, page, data);
+        }
+    }
+
+    private static void ValidateDifferentLevelDuplicateSetup(LanguagePage page,DuplicateLanguageEditData data)
+    {
+        Assert.That(data.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.ExistingLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel),
+            "The attempted edit should keep the first record's level.");
+        Assert.That(data.ExistingLevel, Is.Not.EqualTo(data.UpdatedLevel),
+            "The existing record must have a different level.");
+        Assert.That(
+            string.Equals(data.OriginalLanguage, data.UpdatedLanguage,
+                StringComparison.OrdinalIgnoreCase),
+            Is.False
+        );
+        Assert.That(page.GetLanguageRowCount(), Is.LessThanOrEqualTo(2));
+        Assert.That(page.IsLanguageDisplayed(data.OriginalLanguage), Is.False,
+            "Preserve existing data: the first test name must be absent.");
+        Assert.That(page.IsLanguageDisplayed(data.UpdatedLanguage), Is.False,
+            "Preserve existing data: the second test name must be absent.");
+    }
+
+    private static void VerifyDifferentLevelDuplicateRejected(IWebDriver browser, LanguagePage page,DuplicateLanguageEditData data,
+    int countBefore)
+    {
+        browser.Navigate().Refresh();
+
+        bool existingRetained = page.IsLanguageAndLevelDisplayed(
+            data.UpdatedLanguage, data.ExistingLevel
+        );
+        bool originalRetained = page.IsLanguageAndLevelDisplayed(
+            data.OriginalLanguage, data.OriginalLevel
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalRetained, Is.True,
+                "The rejected edit must preserve the first original record.");
+            Assert.That(existingRetained, Is.True,
+                "The existing language and level must remain unchanged.");
+            Assert.That(page.GetLanguageRecordCount(data.OriginalLanguage),
+                Is.EqualTo(1));
+            Assert.That(page.GetLanguageRecordCount(data.UpdatedLanguage),
+                Is.EqualTo(1),
+                "The existing language name must not appear twice.");
+            Assert.That(page.GetLanguageRecordCount(
+                data.UpdatedLanguage, data.UpdatedLevel), Is.Zero,
+                "The attempted duplicate with a different level must not be saved.");
+            Assert.That(page.GetLanguageRowCount(), Is.EqualTo(countBefore + 2));
+        });
+    }
+
+    private static void CleanupDifferentLevelDuplicate(IWebDriver browser, LanguagePage page, DuplicateLanguageEditData data)
+    {
+        browser.Navigate().Refresh();
+
+        // Allow the saved language data to load before cleanup.
+        page.IsLanguageDisplayed(data.UpdatedLanguage);
+
+        try
+        {
+            page.DeleteOwnedLanguageRecords(data.UpdatedLanguage);
+        }
+        finally
+        {
+            page.DeleteOwnedLanguageRecords(data.OriginalLanguage);
         }
     }
 

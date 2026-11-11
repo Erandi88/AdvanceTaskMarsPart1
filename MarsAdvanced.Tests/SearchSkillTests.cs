@@ -724,7 +724,7 @@ namespace MarsAdvanced.Tests
         }
 
         //Helper - FilterSearchResultsByCombinedFilters()
-        private static void VerifyCombinedSearchFilters(SearchSkillPage search, string keyword, List<string> titles)
+        private static void VerifyCombinedSearchFilters(SearchSkillPage search,string keyword, List<string> titles)
         {
             search.SearchUsingEnter(keyword);
             Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword));
@@ -735,32 +735,42 @@ namespace MarsAdvanced.Tests
             );
 
             search.SelectTestAutomationCategory();
-            Assert.That(
-                search.WaitForResultTitles(titles[0], titles[1], titles[2]),
-                Is.True,
-                "Category filtering should exclude the Programming listing."
+            AssertSelectedSearchResults(
+                search, false, titles[0], titles[1], titles[2]
             );
 
             search.SelectSeleniumSubcategory();
-            Assert.That(
-                search.WaitForResultTitles(titles[0], titles[1]),
-                Is.True,
-                "Subcategory filtering should exclude the API Testing listing."
-            );
+            AssertSelectedSearchResults(search, true, titles[0], titles[1]);
 
             search.SelectLocationFilter("Onsite");
-            Assert.That(
-                search.WaitForResultTitles(titles[0]),
-                Is.True,
-                "Only the On-site Selenium listing should remain."
-            );
+            AssertSelectedSearchResults(search, true, titles[0]);
 
             search.SelectLocationFilter("ShowAll");
+            AssertSelectedSearchResults(search, true, titles[0], titles[1]);
+        }
+
+        private static void AssertSelectedSearchResults(SearchSkillPage search,bool seleniumSelected, params string[] expectedTitles)
+        {
             Assert.That(
-                search.WaitForResultTitles(titles[0], titles[1]),
+                search.WaitForResultTitles(expectedTitles),
                 Is.True,
-                "ShowAll should restore both locations within Selenium."
+                "The selected filters should return exactly the expected listings."
             );
+
+            Assert.That(
+                search.IsCategorySelected("Test Automation"),
+                Is.True,
+                "Test Automation should remain visibly selected."
+            );
+
+            if (seleniumSelected)
+            {
+                Assert.That(
+                    search.IsSubcategorySelected("Selenium"),
+                    Is.True,
+                    "Selenium should remain visibly selected."
+                );
+            }
         }
 
         [TestCase(

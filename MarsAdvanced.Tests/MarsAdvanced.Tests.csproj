@@ -41,6 +41,9 @@
     <None Update="TestData\Language\AddLanguageWithoutLevel.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Language\AddLanguageWithSpacesOnlyName.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Language\AddLanguageWithValidDetails.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -74,6 +77,9 @@
     <None Update="TestData\Language\EditLanguagePersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Language\EditLanguageToExistingNameWithDifferentLevel.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Language\EditLanguageToExistingRecord.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -83,7 +89,16 @@
     <None Update="TestData\Language\EditLanguageWithEmptyName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Language\EditLanguageWithSpacesOnlyName.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Language\EditLanguageWithValidDetails.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Language\LanguageRowsShowEditAndDeleteIcons.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Language\UpdateLanguageWithoutChanges.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\Notification\OpenEmptyNotificationMenu.json">
