@@ -2402,8 +2402,9 @@ public class SkillTests
     private static void CleanupOwnedSkillNames(IWebDriver browser, SkillPage page, params string[] names)
     {
         browser.Navigate().Refresh();
+        ProfileDataWait.WaitForResponse(browser, "getSkill");
         page.ClickSkillsTab();
-        page.IsSkillDisplayed(names[0]);
+        //page.IsSkillDisplayed(names[0]);
 
         var failures = new List<Exception>();
 

@@ -69,7 +69,7 @@ namespace MarsAdvanced.Tests.Pages
                 var languageRow = By.XPath($"//td[normalize-space()='{language}']");
                 return _wait.Until(ExpectedConditions.ElementIsVisible(languageRow)).Displayed;
             }
-            catch
+            catch (WebDriverTimeoutException)
             {
                 return false;
             }
@@ -118,8 +118,8 @@ namespace MarsAdvanced.Tests.Pages
                 _wait.Until(ExpectedConditions.InvisibilityOfElementLocated(languageRow));
                 return true;
             }
-            catch
-            {
+            catch(WebDriverTimeoutException)
+{
                 return false;
             }
         }

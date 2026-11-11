@@ -84,7 +84,7 @@ namespace MarsAdvanced.Tests.Pages
                 var skillRow = By.XPath($"//div[contains(@class,'active')]//td[normalize-space()='{skill}']");
                 return _wait.Until(ExpectedConditions.ElementIsVisible(skillRow)).Displayed;
             }
-            catch
+            catch (WebDriverTimeoutException)
             {
                 return false;
             }

@@ -3103,7 +3103,8 @@ public class LanguageTests
     params string[] names)
     {
         browser.Navigate().Refresh();
-        page.IsLanguageDisplayed(names[0]);
+        //page.IsLanguageDisplayed(names[0]);
+        ProfileDataWait.WaitForResponse(browser, "getLanguage");
 
         var failures = new List<Exception>();
 
