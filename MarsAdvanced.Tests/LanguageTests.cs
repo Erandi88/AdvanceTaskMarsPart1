@@ -51,71 +51,40 @@ public class LanguageTests
         var page = languagePage
             ?? throw new InvalidOperationException("Language page was not created.");
 
-        //string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
-        //string level = "Basic";
-
         string filePath = Path.Combine(
-                                TestContext.CurrentContext.TestDirectory,
-                                "TestData",
-                                "Language",
-                                "AddLanguageWithValidDetails.json"
-                                );
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "AddLanguageWithValidDetails.json");
+        var data = JsonReader.Read<LanguageData>(filePath);
 
-        LanguageData testData = JsonReader.Read<LanguageData>(filePath);
-
-        Assert.That(
-            testData.Language,
-            Is.Not.Null.And.Not.Empty,
-            "The language must be provided in the JSON file."
-        );
-
-        Assert.That(
-            testData.Level,
-            Is.Not.Null.And.Not.Empty,
-            "The language level must be provided in the JSON file."
-        );
-
-        string language = testData.Language;
-        string level = testData.Level;
+        Assert.That(data.Language, Is.Not.Null.And.Not.Empty,
+            "The language must be provided in the JSON file.");
+        Assert.That(data.Level, Is.Not.Null.And.Not.Empty,
+            "The language level must be provided in the JSON file.");
 
         int countBefore = page.GetLanguageRowCount();
-        Console.WriteLine("Row count BEFORE : " + countBefore);
 
-        Assert.That(
-            countBefore,
-            Is.LessThan(4),
-            "The profile needs a free language slot for this test."
-        );
-
-        Assert.That(
-            page.IsLanguageDisplayed(language),
-            Is.False,
-            "The test language must not already exist."
-        );
+        Assert.That(countBefore, Is.LessThan(4),
+            "The profile needs a free language slot for this test.");
+        Assert.That(page.IsLanguageDisplayed(data.Language), Is.False,
+            "The test language must not already exist.");
 
         try
         {
-            page.AddLanguage(language, level);
+            page.AddLanguage(data.Language, data.Level);
 
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(language, level),
-                Is.True,
-                "The new language and its level should appear."
-            );
-            Console.WriteLine("Row count AFTER : " + page.GetLanguageRowCount());
-            Assert.That(
-                page.WaitForLanguageRowCount(countBefore + 1),
-                Is.True,
-                "The language row count should increase by one."
-            );
+                page.IsLanguageAndLevelDisplayed(data.Language, data.Level),
+                Is.True, "The new language and its level should appear.");
+            Assert.That(page.WaitForLanguageRowCount(countBefore + 1), Is.True,
+                "The language row count should increase by one.");
         }
         finally
         {
-            page.DeleteLanguageIfExists(language);
+            page.DeleteLanguageIfExists(data.Language);
         }
     }
 
-    
+
     [Test]
     public void AddLanguageWithEmptyName()
     {
@@ -558,100 +527,45 @@ public class LanguageTests
     public void EditLanguageWithValidDetails()
     {
         var page = languagePage
-           ?? throw new InvalidOperationException("Language page was not created.");
-
-        /*string suffix = Guid.NewGuid().ToString("N")[..8];
-        string originalLanguage = "AutoA" + suffix;
-        string updatedLanguage = "AutoB" + suffix;*/
+            ?? throw new InvalidOperationException("Language page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
-                            TestContext.CurrentContext.TestDirectory,
-                            "TestData",
-                            "Language",
-                            "EditLanguageWithValidDetails.json"
-                        );
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "EditLanguageWithValidDetails.json");
+        var data = JsonReader.Read<EditLanguageData>(filePath);
 
-        EditLanguageData testData = JsonReader.Read<EditLanguageData>(filePath);
+        Assert.That(data.OriginalLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.UpdatedLanguage, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.UpdatedLevel, Is.Not.Null.And.Not.Empty);
 
-        Assert.That(
-            testData.OriginalLanguage,
-            Is.Not.Null.And.Not.Empty,
-            "The original language must be provided."
-        );
-
-        Assert.That(
-            testData.OriginalLevel,
-            Is.Not.Null.And.Not.Empty,
-            "The original level must be provided."
-        );
-
-        Assert.That(
-            testData.UpdatedLanguage,
-            Is.Not.Null.And.Not.Empty,
-            "The updated language must be provided."
-        );
-
-        Assert.That(
-            testData.UpdatedLevel,
-            Is.Not.Null.And.Not.Empty,
-            "The updated level must be provided."
-        );
-
-        string originalLanguage = testData.OriginalLanguage;
-        string originalLevel = testData.OriginalLevel;
-        string updatedLanguage = testData.UpdatedLanguage;
-        string updatedLevel = testData.UpdatedLevel;
         int countBefore = page.GetLanguageRowCount();
-
-        Console.WriteLine("Row count BEFORE Edit : " + countBefore);
-
-        Assert.That(
-            countBefore,
-            Is.LessThan(4),
-            "The profile needs a free language slot for this test."
-        );
-
-        Assert.That(page.IsLanguageDisplayed(originalLanguage), Is.False);
-        Assert.That(page.IsLanguageDisplayed(updatedLanguage), Is.False);
+        Assert.That(countBefore, Is.LessThan(4), "A free language slot is required.");
+        Assert.That(page.IsLanguageDisplayed(data.OriginalLanguage), Is.False);
+        Assert.That(page.IsLanguageDisplayed(data.UpdatedLanguage), Is.False);
 
         try
         {
-            // Arrange: create and verify the record we will edit.
-            page.AddLanguage(originalLanguage, originalLevel);
-
+            page.AddLanguage(data.OriginalLanguage, data.OriginalLevel);
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(originalLanguage, originalLevel),
-                Is.True,
-                "The original language should exist before editing."
-            );
+                page.IsLanguageAndLevelDisplayed(data.OriginalLanguage, data.OriginalLevel),
+                Is.True, "The original language should exist before editing.");
 
-            // Act: edit the record.
-            page.EditLanguage(originalLanguage, updatedLanguage, updatedLevel);
-
-            // Assert: the updated row replaces the original.
+            page.EditLanguage(data.OriginalLanguage, data.UpdatedLanguage, data.UpdatedLevel);
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(updatedLanguage, updatedLevel),
-                Is.True,
-                "The updated language and level should appear."
-            );
-
-            Assert.That(
-                page.IsLanguageRemoved(originalLanguage),
-                Is.True,
-                "The original language should no longer appear."
-            );
-            Console.WriteLine("Row count AFTER Edit : " + page.GetLanguageRowCount());
-            Assert.That(
-                page.GetLanguageRowCount(),
-                Is.EqualTo(countBefore + 1),
-                "Editing should not create an extra row."
-            );
+                page.IsLanguageAndLevelDisplayed(data.UpdatedLanguage, data.UpdatedLevel),
+                Is.True, "The updated language and level should appear.");
+            Assert.That(page.IsLanguageRemoved(data.OriginalLanguage), Is.True,
+                "The original language should no longer appear.");
+            Assert.That(page.GetLanguageRowCount(), Is.EqualTo(countBefore + 1),
+                "Editing should not create an extra row.");
         }
         finally
         {
-            // The record may have either name if the test fails during editing.
-            page.DeleteLanguageIfExists(originalLanguage);
-            page.DeleteLanguageIfExists(updatedLanguage);
+            CleanupOwnedLanguageNames(browser, page,
+                data.OriginalLanguage, data.UpdatedLanguage);
         }
     }
 
@@ -1847,83 +1761,43 @@ public class LanguageTests
     public void DeleteLanguageWithValidDetails()
     {
         var page = languagePage
-           ?? throw new InvalidOperationException("Language page was not created.");
-
-        //string language = "Auto" + Guid.NewGuid().ToString("N")[..8];
-        //string level = "Basic";
+            ?? throw new InvalidOperationException("Language page was not created.");
 
         string filePath = Path.Combine(
-                            TestContext.CurrentContext.TestDirectory,
-                            "TestData",
-                            "Language",
-                            "DeleteLanguageWithValidDetails.json"
-                        );
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Language", "DeleteLanguageWithValidDetails.json");
+        var data = JsonReader.Read<LanguageData>(filePath);
 
-        LanguageData testData = JsonReader.Read<LanguageData>(filePath);
-
-        Assert.That(
-            testData.Language,
-            Is.Not.Null.And.Not.Empty,
-            "The language must be provided."
-        );
-        Assert.That(
-            testData.Level,
-            Is.Not.Null.And.Not.Empty,
-            "The language level must be provided."
-        );
-
-        string language = testData.Language;
-        string level = testData.Level;
+        Assert.That(data.Language, Is.Not.Null.And.Not.Empty,
+            "The language must be provided.");
+        Assert.That(data.Level, Is.Not.Null.And.Not.Empty,
+            "The language level must be provided.");
 
         int countBefore = page.GetLanguageRowCount();
 
-        Console.WriteLine("Row count delete BEFORE : " + countBefore);
-
-        Assert.That(
-            countBefore,
-            Is.LessThan(4),
-            "The profile needs a free language slot for this test."
-        );
-
-        Assert.That(
-            page.IsLanguageDisplayed(language),
-            Is.False,
-            "The test language must not already exist."
-        );
+        Assert.That(countBefore, Is.LessThan(4),
+            "The profile needs a free language slot for this test.");
+        Assert.That(page.IsLanguageDisplayed(data.Language), Is.False,
+            "The test language must not already exist.");
 
         try
         {
-            // Arrange: create the record that this test will delete.
-            page.AddLanguage(language, level);
+            page.AddLanguage(data.Language, data.Level);
 
             Assert.That(
-                page.IsLanguageAndLevelDisplayed(language, level),
-                Is.True,
-                "The test language should exist before deletion."
-            );
+                page.IsLanguageAndLevelDisplayed(data.Language, data.Level),
+                Is.True, "The test language should exist before deletion.");
 
-            // Act: delete the record.
-            page.DeleteLanguage(language);
+            page.DeleteLanguage(data.Language);
 
-            // Assert: check both removal and row count.
-            Assert.That(
-                page.IsLanguageRemoved(language),
-                Is.True,
-                "The deleted language should no longer appear."
-            );
-
-            Console.WriteLine("Row count Delete AFTER : " + page.GetLanguageRowCount());
-
-            Assert.That(
-                page.WaitForLanguageRowCount(countBefore),
-                Is.True,
-                "The row count should return to its original value."
-            );
+            Assert.That(page.IsLanguageRemoved(data.Language), Is.True,
+                "The deleted language should no longer appear.");
+            Assert.That(page.WaitForLanguageRowCount(countBefore), Is.True,
+                "The row count should return to its original value.");
         }
         finally
         {
-            // If deletion failed, attempt to remove our test record.
-            page.DeleteLanguageIfExists(language);
+            page.DeleteLanguageIfExists(data.Language);
         }
     }
 

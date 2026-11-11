@@ -509,9 +509,7 @@ namespace MarsAdvanced.Tests.Pages
                 try
                 {
                     return driver.FindElements(notifications)
-                               .Any(message => message.Displayed) ||
-                           !driver.FindElements(UpdateButton)
-                               .Any(button => button.Displayed);
+                     .Any(message => message.Displayed);
                 }
                 catch (StaleElementReferenceException)
                 {
