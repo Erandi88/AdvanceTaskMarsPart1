@@ -57,328 +57,200 @@ public class ProfileSettingsTests
 
 
     [TestCase(
-        "UpdateAvailabilityPersistsAfterRefresh.json",
-        TestName = "Availability_PartTime_To_FullTime"
-    )]
+    "UpdateAvailabilityPersistsAfterRefresh.json",
+    TestName = "Availability_PartTime_To_FullTime")]
 
     [TestCase(
-        "UpdateAvailabilityToPartTimePersistsAfterRefresh.json",
-        TestName = "Availability_FullTime_To_PartTime"
-    )]
+    "UpdateAvailabilityToPartTimePersistsAfterRefresh.json",
+    TestName = "Availability_FullTime_To_PartTime")]
     public void UpdateAvailabilityPersistsAfterRefresh(string jsonFileName)
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            jsonFileName
-        );
+            "TestData", "ProfileSettings", jsonFileName);
+        var data = JsonReader.Read<AvailabilityData>(filePath);
 
-        AvailabilityData testData =
-            JsonReader.Read<AvailabilityData>(filePath);
-
-        string[] supportedValues = { "Part Time", "Full Time" };
-
-        Assert.That(
-            supportedValues,
-            Does.Contain(testData.InitialAvailability),
-            "The initial Availability must be a supported option."
-        );
-
-        Assert.That(
-            supportedValues,
-            Does.Contain(testData.UpdatedAvailability),
-            "The updated Availability must be a supported option."
-        );
-
-        Assert.That(
-            testData.UpdatedAvailability,
-            Is.Not.EqualTo(testData.InitialAvailability),
-            "This scenario requires a change in Availability."
-        );
-
-        // Capture the original settings.
         string originalAvailability = page.GetAvailability();
         string originalHours = page.GetHours();
         string originalEarnTarget = page.GetEarnTarget();
-
-        Assert.That(
-            supportedValues,
-            Does.Contain(originalAvailability),
-            "A supported original value is required for restoration."
-        );
+        ValidateAvailabilityChange(data, originalAvailability);
 
         try
         {
-            // Arrange: establish this scenario's starting value.
-            if (originalAvailability != testData.InitialAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(testData.InitialAvailability);
+            if (originalAvailability != data.InitialAvailability)
+                SaveAvailabilityAndVerify(page, data.InitialAvailability, "Setup");
 
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Setup should display the save notification."
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(
-                        testData.InitialAvailability
-                    ),
-                    Is.True,
-                    $"Setup should save '{testData.InitialAvailability}'."
-                );
-            }
-
-            // Act: select this scenario's updated value.
-            page.OpenAvailabilityEditor();
-            page.SelectAvailability(testData.UpdatedAvailability);
-
-            Assert.That(
-                page.IsAvailabilityUpdatedMessageDisplayed(),
-                Is.True,
-                "The save notification should appear."
-            );
-
-            Assert.That(
-                page.WaitForAvailability(testData.UpdatedAvailability),
-                Is.True,
-                $"'{testData.UpdatedAvailability}' should appear before refresh."
-            );
-
+            SaveAvailabilityAndVerify(page, data.UpdatedAvailability, "Update");
             browser.Navigate().Refresh();
 
-            // Assert: verify persistence and preserve other settings.
-            Assert.That(
-                page.WaitForAvailability(testData.UpdatedAvailability),
-                Is.True,
-                $"'{testData.UpdatedAvailability}' should remain after refresh."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Changing Availability must not change Hours."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Changing Availability must not change Earn Target."
-            );
+            Assert.That(page.WaitForAvailability(data.UpdatedAvailability), Is.True,
+                "The updated Availability should remain after refresh.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours),
+                "Changing Availability must not change Hours.");
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget),
+                "Changing Availability must not change Earn Target.");
         }
         finally
         {
-            browser.Navigate().Refresh();
-
-            if (page.GetAvailability() != originalAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(originalAvailability);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Availability should show a save message."
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(originalAvailability),
-                    Is.True,
-                    "Cleanup should restore the original Availability."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForAvailability(originalAvailability),
-                Is.True,
-                "The original Availability should remain after cleanup."
-            );
+            RestoreAvailability(browser, page, originalAvailability);
         }
+    }
+
+    private static void ValidateAvailabilityChange(
+        AvailabilityData data,
+        string originalAvailability)
+    {
+        string[] supportedValues = { "Part Time", "Full Time" };
+
+        Assert.That(supportedValues, Does.Contain(data.InitialAvailability),
+            "The initial Availability must be a supported option.");
+        Assert.That(supportedValues, Does.Contain(data.UpdatedAvailability),
+            "The updated Availability must be a supported option.");
+        Assert.That(data.UpdatedAvailability, Is.Not.EqualTo(data.InitialAvailability),
+            "This scenario requires a change in Availability.");
+        Assert.That(supportedValues, Does.Contain(originalAvailability),
+            "A supported original value is required for restoration.");
+    }
+
+    private static void SaveAvailabilityAndVerify(
+        ProfileSettingsPage page,
+        string value,
+        string stage)
+    {
+        page.OpenAvailabilityEditor();
+        page.SelectAvailability(value);
+
+        Assert.That(page.IsAvailabilityUpdatedMessageDisplayed(), Is.True,
+            $"{stage}: the save notification should appear.");
+        Assert.That(page.WaitForAvailability(value), Is.True,
+            $"{stage}: Availability should become '{value}'.");
+    }
+
+    private static void RestoreAvailability(
+        IWebDriver browser,
+        ProfileSettingsPage page,
+        string originalAvailability)
+    {
+        browser.Navigate().Refresh();
+
+        if (page.GetAvailability() != originalAvailability)
+        {
+            SaveAvailabilityAndVerify(page, originalAvailability, "Cleanup");
+            browser.Navigate().Refresh();
+        }
+
+        Assert.That(page.WaitForAvailability(originalAvailability), Is.True,
+            "The original Availability should remain after cleanup.");
     }
 
     [Test]
     public void CloseAvailabilityWithoutChanges()
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            "CloseAvailabilityWithoutChanges.json"
-        );
+            "TestData", "ProfileSettings", "CloseAvailabilityWithoutChanges.json");
+        var data = JsonReader.Read<AvailabilityData>(filePath);
 
-        AvailabilityData testData =
-            JsonReader.Read<AvailabilityData>(filePath);
-
-        Assert.That(
-            testData.InitialAvailability,
-            Is.EqualTo("Part Time")
-        );
+        Assert.That(data.InitialAvailability, Is.EqualTo("Part Time"));
 
         string originalAvailability = page.GetAvailability();
         string originalHours = page.GetHours();
         string originalEarnTarget = page.GetEarnTarget();
 
-        Assert.That(
-            originalAvailability,
-            Is.AnyOf("Part Time", "Full Time"),
-            "An existing Availability value is required for restoration."
-        );
+        Assert.That(originalAvailability, Is.AnyOf("Part Time", "Full Time"),
+            "An existing Availability value is required for restoration.");
 
         try
         {
-            // Arrange: establish Part Time if necessary.
-            if (originalAvailability != testData.InitialAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(testData.InitialAvailability);
+            if (originalAvailability != data.InitialAvailability)
+                SaveAvailabilityAndVerify(page, data.InitialAvailability, "Setup");
 
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(testData.InitialAvailability),
-                    Is.True,
-                    "Setup should save Part Time."
-                );
-            }
-
-            // Act: open and close the editor without selecting anything.
             page.OpenAvailabilityEditor();
             page.CloseAvailabilityEditor();
 
-            // Assert: closing the editor preserves all three values.
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(testData.InitialAvailability),
-                "Availability should remain unchanged."
-            );
+            Assert.That(page.GetAvailability(), Is.EqualTo(data.InitialAvailability),
+                "Availability should remain unchanged.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours),
+                "Hours should remain unchanged.");
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget),
+                "Earn Target should remain unchanged.");
 
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Hours should remain unchanged."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Earn Target should remain unchanged."
-            );
-
-            // Also verify that the saved values survive a reload.
             browser.Navigate().Refresh();
 
-            Assert.That(
-                page.WaitForAvailability(testData.InitialAvailability),
-                Is.True,
-                "Availability should remain unchanged after refresh."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours)
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget)
-            );
+            Assert.That(page.WaitForAvailability(data.InitialAvailability), Is.True,
+                "Availability should remain unchanged after refresh.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours));
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget));
         }
         finally
         {
-            browser.Navigate().Refresh();
-
-            if (page.GetAvailability() != originalAvailability)
-            {
-                page.OpenAvailabilityEditor();
-                page.SelectAvailability(originalAvailability);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoration should show a save message."
-                );
-
-                Assert.That(
-                    page.WaitForAvailability(originalAvailability),
-                    Is.True,
-                    "Cleanup should restore the original Availability."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForAvailability(originalAvailability),
-                Is.True,
-                "The original Availability should remain after cleanup."
-            );
+            RestoreAvailability(browser, page, originalAvailability);
         }
     }
 
     /* Hours */
 
     [TestCase(
-        "UpdateHoursPersistsAfterRefresh.json",
-        TestName = "Hours_MoreThan30_To_LessThan30"
-    )]
-
+    "UpdateHoursPersistsAfterRefresh.json",
+    TestName = "Hours_MoreThan30_To_LessThan30")]
     [TestCase(
-        "UpdateHoursToAsNeededPersistsAfterRefresh.json",
-        TestName = "Hours_LessThan30_To_AsNeeded"
-    )]
-
+    "UpdateHoursToAsNeededPersistsAfterRefresh.json",
+    TestName = "Hours_LessThan30_To_AsNeeded")]
     [TestCase(
-        "UpdateHoursToMoreThan30PersistsAfterRefresh.json",
-        TestName = "Hours_AsNeeded_To_MoreThan30"
-    )]
+    "UpdateHoursToMoreThan30PersistsAfterRefresh.json",
+    TestName = "Hours_AsNeeded_To_MoreThan30")]
     public void UpdateHoursPersistsAfterRefresh(string jsonFileName)
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            jsonFileName
-        );
+            "TestData", "ProfileSettings", jsonFileName);
+        var data = JsonReader.Read<HoursData>(filePath);
 
-        HoursData testData = JsonReader.Read<HoursData>(filePath);
+        string originalHours = page.GetHours();
+        string originalAvailability = page.GetAvailability();
+        string originalEarnTarget = page.GetEarnTarget();
+        ValidateHoursChange(data, originalHours);
 
+        try
+        {
+            if (originalHours != data.InitialHours)
+                SaveHoursAndVerify(page, data.InitialHours, "Setup");
+
+            SaveHoursAndVerify(page, data.UpdatedHours, "Update");
+            browser.Navigate().Refresh();
+
+            Assert.That(page.WaitForHours(data.UpdatedHours), Is.True,
+                "The updated Hours should remain after refresh.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Changing Hours must not change Availability.");
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget),
+                "Changing Hours must not change Earn Target.");
+        }
+        finally
+        {
+            RestoreHours(browser, page, originalHours);
+        }
+    }
+
+    private static void ValidateHoursChange(
+        HoursData data,
+        string originalHours)
+    {
         string[] supportedHours =
         {
         "Less than 30hours a week",
@@ -386,565 +258,247 @@ public class ProfileSettingsTests
         "As needed"
     };
 
-        Assert.That(
-            supportedHours,
-            Does.Contain(testData.InitialHours),
-            "The initial Hours must be a supported option."
-        );
+        Assert.That(supportedHours, Does.Contain(data.InitialHours),
+            "The initial Hours must be a supported option.");
+        Assert.That(supportedHours, Does.Contain(data.UpdatedHours),
+            "The updated Hours must be a supported option.");
+        Assert.That(data.UpdatedHours, Is.Not.EqualTo(data.InitialHours),
+            "This scenario requires a change in Hours.");
+        Assert.That(supportedHours, Does.Contain(originalHours),
+            "An existing supported Hours value is required for restoration.");
+    }
 
-        Assert.That(
-            supportedHours,
-            Does.Contain(testData.UpdatedHours),
-            "The updated Hours must be a supported option."
-        );
+    private static void SaveHoursAndVerify(
+        ProfileSettingsPage page,
+        string value,
+        string stage)
+    {
+        page.OpenHoursEditor();
+        page.SelectHours(value);
 
-        Assert.That(
-            testData.UpdatedHours,
-            Is.Not.EqualTo(testData.InitialHours),
-            "This scenario requires a change in Hours."
-        );
+        Assert.That(page.IsAvailabilityUpdatedMessageDisplayed(), Is.True,
+            $"{stage}: the save notification should appear.");
+        Assert.That(page.WaitForHours(value), Is.True,
+            $"{stage}: Hours should become '{value}'.");
+    }
 
-        // Capture the original settings for comparison and cleanup.
-        string originalHours = page.GetHours();
-        string originalAvailability = page.GetAvailability();
-        string originalEarnTarget = page.GetEarnTarget();
+    private static void RestoreHours(
+        IWebDriver browser,
+        ProfileSettingsPage page,
+        string originalHours)
+    {
+        browser.Navigate().Refresh();
 
-        Assert.That(
-            supportedHours,
-            Does.Contain(originalHours),
-            "An existing supported Hours value is required for restoration."
-        );
-
-        try
+        if (page.GetHours() != originalHours)
         {
-            // Arrange: establish this scenario's starting value.
-            if (originalHours != testData.InitialHours)
-            {
-                page.OpenHoursEditor();
-                page.SelectHours(testData.InitialHours);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Setup should display the save notification."
-                );
-
-                Assert.That(
-                    page.WaitForHours(testData.InitialHours),
-                    Is.True,
-                    $"Setup should save '{testData.InitialHours}'."
-                );
-            }
-
-            // Act: select this scenario's updated value.
-            page.OpenHoursEditor();
-            page.SelectHours(testData.UpdatedHours);
-
-            Assert.That(
-                page.IsAvailabilityUpdatedMessageDisplayed(),
-                Is.True,
-                "The save notification should appear."
-            );
-
-            Assert.That(
-                page.WaitForHours(testData.UpdatedHours),
-                Is.True,
-                $"'{testData.UpdatedHours}' should appear before refresh."
-            );
-
+            SaveHoursAndVerify(page, originalHours, "Cleanup");
             browser.Navigate().Refresh();
-
-            // Assert: verify persistence and preserve other settings.
-            Assert.That(
-                page.WaitForHours(testData.UpdatedHours),
-                Is.True,
-                $"'{testData.UpdatedHours}' should remain after refresh."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Changing Hours must not change Availability."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Changing Hours must not change Earn Target."
-            );
         }
-        finally
-        {
-            browser.Navigate().Refresh();
 
-            if (page.GetHours() != originalHours)
-            {
-                page.OpenHoursEditor();
-                page.SelectHours(originalHours);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Hours should display a save notification."
-                );
-
-                Assert.That(
-                    page.WaitForHours(originalHours),
-                    Is.True,
-                    "Cleanup should restore the original Hours."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForHours(originalHours),
-                Is.True,
-                "The original Hours should remain after cleanup."
-            );
-        }
+        Assert.That(page.WaitForHours(originalHours), Is.True,
+            "The original Hours should remain after cleanup.");
     }
 
     [Test]
     public void CloseHoursWithoutChanges()
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            "CloseHoursWithoutChanges.json"
-        );
+            "TestData", "ProfileSettings", "CloseHoursWithoutChanges.json");
+        var data = JsonReader.Read<HoursData>(filePath);
 
-        HoursData testData = JsonReader.Read<HoursData>(filePath);
+        Assert.That(data.InitialHours, Is.EqualTo("More than 30hours a week"));
 
-        Assert.That(
-            testData.InitialHours,
-            Is.EqualTo("More than 30hours a week")
-        );
-
-        // Remember the original settings before changing anything.
         string originalHours = page.GetHours();
         string originalAvailability = page.GetAvailability();
         string originalEarnTarget = page.GetEarnTarget();
 
-        Assert.That(
-            originalHours,
-            Is.AnyOf(
-                "Less than 30hours a week",
-                "More than 30hours a week",
-                "As needed"
-            ),
-            "A supported original Hours value is required for restoration."
-        );
+        Assert.That(originalHours, Is.AnyOf(
+            "Less than 30hours a week", "More than 30hours a week", "As needed"),
+            "A supported original Hours value is required for restoration.");
 
         try
         {
-            // Arrange: establish the required starting value.
-            if (originalHours != testData.InitialHours)
-            {
-                page.OpenHoursEditor();
-                page.SelectHours(testData.InitialHours);
+            if (originalHours != data.InitialHours)
+                SaveHoursAndVerify(page, data.InitialHours, "Setup");
 
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Setup should display the save notification."
-                );
-
-                Assert.That(
-                    page.WaitForHours(testData.InitialHours),
-                    Is.True,
-                    "Setup should save the initial Hours value."
-                );
-            }
-
-            // Act: open and close Hours without selecting another option.
             page.OpenHoursEditor();
             page.CloseHoursEditor();
 
-            // Assert: closing preserves all three settings.
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(testData.InitialHours),
-                "Hours should remain unchanged after closing the editor."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Availability should remain unchanged."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Earn Target should remain unchanged."
-            );
+            Assert.That(page.GetHours(), Is.EqualTo(data.InitialHours),
+                "Hours should remain unchanged after closing the editor.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged.");
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget),
+                "Earn Target should remain unchanged.");
 
             browser.Navigate().Refresh();
 
-            // Verify the same values after reload.
-            Assert.That(
-                page.WaitForHours(testData.InitialHours),
-                Is.True,
-                "Hours should remain unchanged after refresh."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Availability should remain unchanged after refresh."
-            );
-
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(originalEarnTarget),
-                "Earn Target should remain unchanged after refresh."
-            );
+            Assert.That(page.WaitForHours(data.InitialHours), Is.True,
+                "Hours should remain unchanged after refresh.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged after refresh.");
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(originalEarnTarget),
+                "Earn Target should remain unchanged after refresh.");
         }
         finally
         {
-            browser.Navigate().Refresh();
-
-            if (page.GetHours() != originalHours)
-            {
-                page.OpenHoursEditor();
-                page.SelectHours(originalHours);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Hours should display a save notification."
-                );
-
-                Assert.That(
-                    page.WaitForHours(originalHours),
-                    Is.True,
-                    "Cleanup should restore the original Hours."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForHours(originalHours),
-                Is.True,
-                "The original Hours should remain after cleanup."
-            );
+            RestoreHours(browser, page, originalHours);
         }
     }
 
     /* Earn Target */
 
     [TestCase(
-        "UpdateEarnTargetToBetween500And1000.json",
-        TestName = "EarnTarget_LessThan500_To_Between500And1000"
-    )]
+    "UpdateEarnTargetToBetween500And1000.json",
+    TestName = "EarnTarget_LessThan500_To_Between500And1000")]
 
     [TestCase(
-        "UpdateEarnTargetToMoreThan1000.json",
-        TestName = "EarnTarget_Between500And1000_To_MoreThan1000"
-    )]
+    "UpdateEarnTargetToMoreThan1000.json",
+    TestName = "EarnTarget_Between500And1000_To_MoreThan1000")]
 
     [TestCase(
-        "UpdateEarnTargetToLessThan500.json",
-        TestName = "EarnTarget_MoreThan1000_To_LessThan500"
-    )]
-
+    "UpdateEarnTargetToLessThan500.json",
+    TestName = "EarnTarget_MoreThan1000_To_LessThan500")]
     public void UpdateEarnTargetPersistsAfterRefresh(string jsonFileName)
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            jsonFileName
-        );
+            "TestData", "ProfileSettings", jsonFileName);
+        var data = JsonReader.Read<EarnTargetData>(filePath);
 
-        EarnTargetData testData =
-            JsonReader.Read<EarnTargetData>(filePath);
+        string originalEarnTarget = page.GetEarnTarget();
+        string originalAvailability = page.GetAvailability();
+        string originalHours = page.GetHours();
+        ValidateEarnTargetChange(data, originalEarnTarget);
 
+        try
+        {
+            if (originalEarnTarget != data.InitialEarnTarget)
+                SaveEarnTargetAndVerify(page, data.InitialEarnTarget, "Setup");
+
+            SaveEarnTargetAndVerify(page, data.UpdatedEarnTarget, "Update");
+            browser.Navigate().Refresh();
+
+            Assert.That(page.WaitForEarnTarget(data.UpdatedEarnTarget), Is.True,
+                "The updated Earn Target should remain after refresh.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Changing Earn Target must not change Availability.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours),
+                "Changing Earn Target must not change Hours.");
+        }
+        finally
+        {
+            RestoreEarnTarget(browser, page, originalEarnTarget);
+        }
+    }
+
+    private static void ValidateEarnTargetChange(EarnTargetData data, string originalEarnTarget)
+    {
         string[] supportedValues =
         {
         "Less than $500 per month",
         "Between $500 and $1000 per month",
         "More than $1000 per month"
-    };
+        };
 
-        Assert.That(
-            supportedValues,
-            Does.Contain(testData.InitialEarnTarget),
-            "The initial Earn Target must be a supported option."
-        );
+        Assert.That(supportedValues, Does.Contain(data.InitialEarnTarget),
+            "The initial Earn Target must be a supported option.");
+        Assert.That(supportedValues, Does.Contain(data.UpdatedEarnTarget),
+            "The updated Earn Target must be a supported option.");
+        Assert.That(data.UpdatedEarnTarget, Is.Not.EqualTo(data.InitialEarnTarget),
+            "This scenario requires a change in Earn Target.");
+        Assert.That(supportedValues, Does.Contain(originalEarnTarget),
+            "A supported original value is required for restoration.");
+    }
 
-        Assert.That(
-            supportedValues,
-            Does.Contain(testData.UpdatedEarnTarget),
-            "The updated Earn Target must be a supported option."
-        );
+    private static void SaveEarnTargetAndVerify(ProfileSettingsPage page, string value, string stage)
+    {
+        page.OpenEarnTargetEditor();
+        page.SelectEarnTarget(value);
 
-        Assert.That(
-            testData.UpdatedEarnTarget,
-            Is.Not.EqualTo(testData.InitialEarnTarget),
-            "This scenario requires a change in Earn Target."
-        );
+        Assert.That(page.IsAvailabilityUpdatedMessageDisplayed(), Is.True,
+            $"{stage}: the save notification should appear.");
+        Assert.That(page.WaitForEarnTarget(value), Is.True,
+            $"{stage}: Earn Target should become '{value}'.");
+    }
 
-        // Capture the original settings.
-        string originalEarnTarget = page.GetEarnTarget();
-        string originalAvailability = page.GetAvailability();
-        string originalHours = page.GetHours();
+    private static void RestoreEarnTarget(IWebDriver browser, ProfileSettingsPage page, string originalEarnTarget)
+    {
+        browser.Navigate().Refresh();
 
-        Assert.That(
-            supportedValues,
-            Does.Contain(originalEarnTarget),
-            "A supported original value is required for restoration."
-        );
-
-        try
+        if (page.GetEarnTarget() != originalEarnTarget)
         {
-            // Arrange: establish this scenario's starting value.
-            if (originalEarnTarget != testData.InitialEarnTarget)
-            {
-                page.OpenEarnTargetEditor();
-                page.SelectEarnTarget(testData.InitialEarnTarget);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Setup should display the save notification."
-                );
-
-                Assert.That(
-                    page.WaitForEarnTarget(testData.InitialEarnTarget),
-                    Is.True,
-                    $"Setup should save '{testData.InitialEarnTarget}'."
-                );
-            }
-
-            // Act: select the updated value.
-            page.OpenEarnTargetEditor();
-            page.SelectEarnTarget(testData.UpdatedEarnTarget);
-
-            Assert.That(
-                page.IsAvailabilityUpdatedMessageDisplayed(),
-                Is.True,
-                "The save notification should appear."
-            );
-
-            Assert.That(
-                page.WaitForEarnTarget(testData.UpdatedEarnTarget),
-                Is.True,
-                "The updated Earn Target should appear before refresh."
-            );
-
+            SaveEarnTargetAndVerify(page, originalEarnTarget, "Cleanup");
             browser.Navigate().Refresh();
-
-            // Assert: verify persistence and preserve other settings.
-            Assert.That(
-                page.WaitForEarnTarget(testData.UpdatedEarnTarget),
-                Is.True,
-                $"'{testData.UpdatedEarnTarget}' should remain after refresh."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Changing Earn Target must not change Availability."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Changing Earn Target must not change Hours."
-            );
         }
-        finally
-        {
-            browser.Navigate().Refresh();
 
-            if (page.GetEarnTarget() != originalEarnTarget)
-            {
-                page.OpenEarnTargetEditor();
-                page.SelectEarnTarget(originalEarnTarget);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Earn Target should show a save message."
-                );
-
-                Assert.That(
-                    page.WaitForEarnTarget(originalEarnTarget),
-                    Is.True,
-                    "Cleanup should restore the original Earn Target."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForEarnTarget(originalEarnTarget),
-                Is.True,
-                "The original Earn Target should remain after cleanup."
-            );
-        }
+        Assert.That(page.WaitForEarnTarget(originalEarnTarget), Is.True,
+            "The original Earn Target should remain after cleanup.");
     }
 
     [Test]
     public void CloseEarnTargetWithoutChanges()
     {
         var page = profileSettingsPage
-            ?? throw new InvalidOperationException(
-                "Profile settings page was not created."
-            );
-
+            ?? throw new InvalidOperationException("Profile settings page was not created.");
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ProfileSettings",
-            "CloseEarnTargetWithoutChanges.json"
-        );
+            "TestData", "ProfileSettings", "CloseEarnTargetWithoutChanges.json");
+        var data = JsonReader.Read<EarnTargetData>(filePath);
 
-        EarnTargetData testData =
-            JsonReader.Read<EarnTargetData>(filePath);
+        Assert.That(data.InitialEarnTarget, Is.EqualTo("Less than $500 per month"));
 
-        Assert.That(
-            testData.InitialEarnTarget,
-            Is.EqualTo("Less than $500 per month")
-        );
-
-        // Capture the original settings before changing anything.
         string originalEarnTarget = page.GetEarnTarget();
         string originalAvailability = page.GetAvailability();
         string originalHours = page.GetHours();
 
-        Assert.That(
-            originalEarnTarget,
-            Is.AnyOf(
-                "Less than $500 per month",
-                "Between $500 and $1000 per month",
-                "More than $1000 per month"
-            ),
-            "A supported original value is required for restoration."
-        );
+        Assert.That(originalEarnTarget, Is.AnyOf(
+            "Less than $500 per month",
+            "Between $500 and $1000 per month",
+            "More than $1000 per month"),
+            "A supported original value is required for restoration.");
 
         try
         {
-            // Arrange: establish the required starting value.
-            if (originalEarnTarget != testData.InitialEarnTarget)
-            {
-                page.OpenEarnTargetEditor();
-                page.SelectEarnTarget(testData.InitialEarnTarget);
+            if (originalEarnTarget != data.InitialEarnTarget)
+                SaveEarnTargetAndVerify(page, data.InitialEarnTarget, "Setup");
 
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Setup should display the save notification."
-                );
-
-                Assert.That(
-                    page.WaitForEarnTarget(testData.InitialEarnTarget),
-                    Is.True,
-                    "Setup should save the initial Earn Target."
-                );
-            }
-
-            // Act: open and close without selecting another option.
             page.OpenEarnTargetEditor();
             page.CloseEarnTargetEditor();
 
-            // Assert: closing preserves all three settings.
-            Assert.That(
-                page.GetEarnTarget(),
-                Is.EqualTo(testData.InitialEarnTarget),
-                "Earn Target should remain unchanged after closing."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Availability should remain unchanged."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Hours should remain unchanged."
-            );
+            Assert.That(page.GetEarnTarget(), Is.EqualTo(data.InitialEarnTarget),
+                "Earn Target should remain unchanged after closing.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours),
+                "Hours should remain unchanged.");
 
             browser.Navigate().Refresh();
 
-            Assert.That(
-                page.WaitForEarnTarget(testData.InitialEarnTarget),
-                Is.True,
-                "Earn Target should remain unchanged after refresh."
-            );
-
-            Assert.That(
-                page.GetAvailability(),
-                Is.EqualTo(originalAvailability),
-                "Availability should remain unchanged after refresh."
-            );
-
-            Assert.That(
-                page.GetHours(),
-                Is.EqualTo(originalHours),
-                "Hours should remain unchanged after refresh."
-            );
+            Assert.That(page.WaitForEarnTarget(data.InitialEarnTarget), Is.True,
+                "Earn Target should remain unchanged after refresh.");
+            Assert.That(page.GetAvailability(), Is.EqualTo(originalAvailability),
+                "Availability should remain unchanged after refresh.");
+            Assert.That(page.GetHours(), Is.EqualTo(originalHours),
+                "Hours should remain unchanged after refresh.");
         }
         finally
         {
-            browser.Navigate().Refresh();
-
-            if (page.GetEarnTarget() != originalEarnTarget)
-            {
-                page.OpenEarnTargetEditor();
-                page.SelectEarnTarget(originalEarnTarget);
-
-                Assert.That(
-                    page.IsAvailabilityUpdatedMessageDisplayed(),
-                    Is.True,
-                    "Restoring Earn Target should show a save message."
-                );
-
-                Assert.That(
-                    page.WaitForEarnTarget(originalEarnTarget),
-                    Is.True,
-                    "Cleanup should restore the original Earn Target."
-                );
-
-                browser.Navigate().Refresh();
-            }
-
-            Assert.That(
-                page.WaitForEarnTarget(originalEarnTarget),
-                Is.True,
-                "The original Earn Target should remain after cleanup."
-            );
+            RestoreEarnTarget(browser, page, originalEarnTarget);
         }
     }
 
