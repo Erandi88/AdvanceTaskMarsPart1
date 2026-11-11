@@ -52,237 +52,57 @@ public class ShareSkillTests
 
 
     [TestCase(
-        "AddShareSkillWithValidDetails.json",
-        TestName = "ShareSkill_CreateHourlyOnlineActive"
-    )]
+    "AddShareSkillWithValidDetails.json",
+    TestName = "ShareSkill_CreateHourlyOnlineActive")]
 
     [TestCase(
-        "AddShareSkillWithOneOffService.json",
-        TestName = "ShareSkill_CreateOneOff"
-    )]
+    "AddShareSkillWithOneOffService.json",
+    TestName = "ShareSkill_CreateOneOff")]
 
     [TestCase(
-        "AddShareSkillWithOnSiteLocation.json",
-        TestName = "ShareSkill_CreateOnSite"
-    )]
+    "AddShareSkillWithOnSiteLocation.json",
+    TestName = "ShareSkill_CreateOnSite")]
 
     [TestCase(
-        "AddShareSkillWithHiddenStatus.json",
-        TestName = "ShareSkill_CreateHidden"
-    )]
+    "AddShareSkillWithHiddenStatus.json",
+    TestName = "ShareSkill_CreateHidden")]
 
     [TestCase(
-        "AddShareSkillWithCredit.json",
-        TestName = "ShareSkill_CreateCredit"
-    )]
-
+    "AddShareSkillWithCredit.json",
+    TestName = "ShareSkill_CreateCredit")]
     public void AddShareSkillWithValidDetails(string jsonFileName)
     {
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ShareSkill",
-            jsonFileName
-        );
+            "TestData", "ShareSkill", jsonFileName);
+        var data = JsonReader.Read<ShareSkillData>(filePath);
+        ValidateShareSkillCreationData(data);
 
-        ShareSkillData testData =
-            JsonReader.Read<ShareSkillData>(filePath);
-
-        Assert.That(testData.Title, Is.Not.Null.And.Not.Empty);
-        Assert.That(testData.Description, Is.Not.Null.And.Not.Empty);
-        Assert.That(testData.Category, Is.Not.Null.And.Not.Empty);
-        Assert.That(testData.Subcategory, Is.Not.Null.And.Not.Empty);
-
-        Assert.That(testData.Tags, Is.Not.Null.And.Not.Empty);
-      
-
-        // Allow the supported variations supplied by each JSON file.
-        Assert.That(
-            testData.ServiceType,
-            Is.AnyOf("Hourly basis service", "One-off service")
-        );
-
-        Assert.That(
-            testData.LocationType,
-            Is.AnyOf("Online", "On-site")
-        );
-
-        Assert.That(
-            testData.SkillTrade,
-            Is.AnyOf("Skill-exchange", "Credit")
-        );
-
-        if (testData.SkillTrade == "Skill-exchange")
-        {
-            Assert.That(
-                testData.SkillExchangeTags,
-                Is.Not.Null.And.Not.Empty
-            );
-        }
-        else
-        {
-            Assert.That(
-                testData.CreditAmount,
-                Is.Not.Null.And.Not.Empty
-            );
-
-            Assert.That(
-                testData.CreditAmount.Length,
-                Is.LessThanOrEqualTo(4),
-                "The credit amount must fit the input's four-character limit."
-            );
-        }
-
-        Assert.That(
-            testData.ActiveStatus,
-            Is.AnyOf("Active", "Hidden")
-        );
-
-        foreach (string tag in testData.Tags.Concat(
-            testData.SkillExchangeTags))
-        {
-            Assert.That(tag, Is.Not.Null.And.Not.Empty);
-        }
-
-        // Generate a unique title for safe verification and cleanup.
-        string suffix = Guid.NewGuid().ToString("N")[..8];
-        string title = $"{testData.Title} {suffix}";
-
-        Assert.That(
-            title.Length,
-            Is.LessThanOrEqualTo(100),
-            "The complete title must fit the 100-character limit."
-        );
-
-        Assert.That(
-            testData.Description.Length,
-            Is.LessThanOrEqualTo(600)
-        );
+        string title = $"{data.Title} {Guid.NewGuid().ToString("N")[..8]}";
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100),
+            "The complete title must fit the 100-character limit.");
 
         var form = new ShareSkillPage(browser);
         var listings = new ManageListingsPage(browser);
-
         listings.Open();
-
-        Assert.That(
-            listings.FindListingByTitle(title),
-            Is.False,
-            "The generated test title must not already exist."
-        );
+        Assert.That(listings.FindListingByTitle(title), Is.False,
+            "The generated test title must not already exist.");
 
         bool saveAttempted = false;
-
         try
         {
             form.OpenShareSkill();
-            form.FillForm(testData, title);
-
-            // Calendar and Work Samples remain empty for these cases.
+            form.FillForm(data, title);
             saveAttempted = true;
             form.ClickSave();
             form.WaitForSaveToComplete();
 
-            listings.Open();
-
-            Assert.That(
-                listings.FindListingByTitle(title),
-                Is.True,
-                "The saved listing should appear in Manage Listings."
-            );
-
-            // Verify persistence after reloading.
-            browser.Navigate().Refresh();
-            listings.Open();
-
-            Assert.That(
-                listings.FindListingByTitle(title),
-                Is.True,
-                "The saved listing should remain after refresh."
-            );
-
+            VerifyCreatedListingPersists(browser, listings, title);
             listings.OpenListingForEdit(title);
-
-            // Compare the saved values with this scenario's data.
-            Assert.Multiple(() =>
-            {
-                Assert.That(
-                    form.GetTitle(),
-                    Is.EqualTo(title),
-                    "The complete saved title should match."
-                );
-
-                Assert.That(
-                    form.GetDescription(),
-                    Is.EqualTo(testData.Description),
-                    "The complete saved description should match."
-                );
-
-                Assert.That(
-                    form.GetCategory(),
-                    Is.EqualTo(testData.Category),
-                    "The saved category should match."
-                );
-
-                Assert.That(
-                    form.GetSubcategory(),
-                    Is.EqualTo(testData.Subcategory),
-                    "The saved subcategory should match."
-                );
-
-                Assert.That(
-                    form.GetTags(),
-                    Is.EquivalentTo(testData.Tags),
-                    "The saved tags should match."
-                );
-
-                // Verify the saved value for the selected trade type.
-                if (testData.SkillTrade == "Skill-exchange")
-                {
-                    Assert.That(
-                        form.GetSkillExchangeTags(),
-                        Is.EquivalentTo(testData.SkillExchangeTags),
-                        "The saved exchange tags should match."
-                    );
-                }
-                else
-                {
-                    Assert.That(
-                        form.GetCreditAmount(),
-                        Is.EqualTo(testData.CreditAmount),
-                        "The saved credit amount should match."
-                    );
-                }
-
-                Assert.That(
-                    form.GetServiceType(),
-                    Is.EqualTo(testData.ServiceType),
-                    "The saved service type should match."
-                );
-
-                Assert.That(
-                    form.GetLocationType(),
-                    Is.EqualTo(testData.LocationType),
-                    "The saved location type should match."
-                );
-
-                Assert.That(
-                    form.GetSkillTrade(),
-                    Is.EqualTo(testData.SkillTrade),
-                    "The saved skill trade should match."
-                );
-
-                Assert.That(
-                    form.GetActiveStatus(),
-                    Is.EqualTo(testData.ActiveStatus),
-                    "The saved active status should match."
-                );
-            });
-
+            VerifyCreatedShareSkillValues(form, data, title);
             form.ClickCancel();
         }
         finally
@@ -293,6 +113,93 @@ public class ShareSkillTests
                 listings.DeleteListingIfExists(title);
             }
         }
+    }
+
+    private static void ValidateShareSkillCreationData(ShareSkillData data)
+    {
+        Assert.That(data.Title, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Description, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Category, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Subcategory, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Tags, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.ServiceType,
+            Is.AnyOf("Hourly basis service", "One-off service"));
+        Assert.That(data.LocationType, Is.AnyOf("Online", "On-site"));
+        Assert.That(data.SkillTrade, Is.AnyOf("Skill-exchange", "Credit"));
+        Assert.That(data.ActiveStatus, Is.AnyOf("Active", "Hidden"));
+        Assert.That(data.Description.Length, Is.LessThanOrEqualTo(600));
+
+        if (data.SkillTrade == "Skill-exchange")
+        {
+            Assert.That(data.SkillExchangeTags, Is.Not.Null.And.Not.Empty);
+        }
+        else
+        {
+            Assert.That(data.CreditAmount, Is.Not.Null.And.Not.Empty);
+            Assert.That(data.CreditAmount.Length, Is.LessThanOrEqualTo(4),
+                "The credit amount must fit the input's four-character limit.");
+        }
+
+        foreach (string tag in data.Tags.Concat(data.SkillExchangeTags))
+        {
+            Assert.That(tag, Is.Not.Null.And.Not.Empty);
+        }
+    }
+
+    private static void VerifyCreatedListingPersists(
+        IWebDriver browser,
+        ManageListingsPage listings,
+        string title)
+    {
+        listings.Open();
+        Assert.That(listings.FindListingByTitle(title), Is.True,
+            "The saved listing should appear in Manage Listings.");
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        Assert.That(listings.FindListingByTitle(title), Is.True,
+            "The saved listing should remain after refresh.");
+    }
+
+    private static void VerifyCreatedShareSkillValues(
+        ShareSkillPage form,
+        ShareSkillData data,
+        string title)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(form.GetTitle(), Is.EqualTo(title),
+                "The complete saved title should match.");
+            Assert.That(form.GetDescription(), Is.EqualTo(data.Description),
+                "The complete saved description should match.");
+            Assert.That(form.GetCategory(), Is.EqualTo(data.Category),
+                "The saved category should match.");
+            Assert.That(form.GetSubcategory(), Is.EqualTo(data.Subcategory),
+                "The saved subcategory should match.");
+            Assert.That(form.GetTags(), Is.EquivalentTo(data.Tags),
+                "The saved tags should match.");
+
+            if (data.SkillTrade == "Skill-exchange")
+            {
+                Assert.That(form.GetSkillExchangeTags(),
+                    Is.EquivalentTo(data.SkillExchangeTags),
+                    "The saved exchange tags should match.");
+            }
+            else
+            {
+                Assert.That(form.GetCreditAmount(), Is.EqualTo(data.CreditAmount),
+                    "The saved credit amount should match.");
+            }
+
+            Assert.That(form.GetServiceType(), Is.EqualTo(data.ServiceType),
+                "The saved service type should match.");
+            Assert.That(form.GetLocationType(), Is.EqualTo(data.LocationType),
+                "The saved location type should match.");
+            Assert.That(form.GetSkillTrade(), Is.EqualTo(data.SkillTrade),
+                "The saved skill trade should match.");
+            Assert.That(form.GetActiveStatus(), Is.EqualTo(data.ActiveStatus),
+                "The saved active status should match.");
+        });
     }
 
 
@@ -380,176 +287,137 @@ public class ShareSkillTests
     }
 
     [TestCase(
-        "AddShareSkillWithEmptyTitle.json",
-        "Title",
-        "Title is required",
-        TestName = "ShareSkill_RejectsEmptyTitle"
-    )]
+    "AddShareSkillWithEmptyTitle.json", "Title", "Title is required",
+    TestName = "ShareSkill_RejectsEmptyTitle")]
 
     [TestCase(
-        "AddShareSkillWithEmptyDescription.json",
-        "Description",
-        "Description is required",
-        TestName = "ShareSkill_RejectsEmptyDescription"
-    )]
+    "AddShareSkillWithEmptyDescription.json",
+    "Description", "Description is required",
+    TestName = "ShareSkill_RejectsEmptyDescription")]
 
     [TestCase(
-        "AddShareSkillWithMissingCategory.json",
-        "Category",
-        "Category is required",
-        TestName = "ShareSkill_RejectsMissingCategory"
-    )]
+    "AddShareSkillWithMissingCategory.json", "Category", "Category is required",
+    TestName = "ShareSkill_RejectsMissingCategory")]
 
     [TestCase(
-        "AddShareSkillWithMissingSubcategory.json",
-        "Subcategory",
-        "Subcategory is required",
-        TestName = "ShareSkill_RejectsMissingSubcategory"
-    )]
+    "AddShareSkillWithMissingSubcategory.json",
+    "Subcategory", "Subcategory is required",
+    TestName = "ShareSkill_RejectsMissingSubcategory")]
 
     [TestCase(
-        "AddShareSkillWithMissingTags.json",
-        "Tags",
-        "Tags are required",
-        TestName = "ShareSkill_RejectsMissingTags"
-    )]
+    "AddShareSkillWithMissingTags.json", "Tags", "Tags are required",
+    TestName = "ShareSkill_RejectsMissingTags")]
 
     [TestCase(
-        "AddShareSkillWithMissingExchangeTags.json",
-        "Skill-Exchange",
-        "Tag is required",
-        TestName = "ShareSkill_RejectsMissingExchangeTags"
-    )]
+    "AddShareSkillWithMissingExchangeTags.json",
+    "Skill-Exchange", "Tag is required",
+    TestName = "ShareSkill_RejectsMissingExchangeTags")]
 
-    public void AddShareSkillWithMissingRequiredField(string jsonFileName,string missingField, string expectedMessage)
+    public void AddShareSkillWithMissingRequiredField(
+    string jsonFileName, string missingField, string expectedMessage)
     {
         var browser = driver
-            ?? throw new InvalidOperationException(
-                "Browser was not created."
-            );
+            ?? throw new InvalidOperationException("Browser was not created.");
 
         string filePath = Path.Combine(
             TestContext.CurrentContext.TestDirectory,
-            "TestData",
-            "ShareSkill",
-            jsonFileName
-        );
+            "TestData", "ShareSkill", jsonFileName);
+        var data = JsonReader.Read<ShareSkillData>(filePath);
 
-        ShareSkillData testData = JsonReader.Read<ShareSkillData>(filePath);
-
-        // Preserve an empty title; otherwise generate a unique title.
         string title = missingField == "Title"
             ? string.Empty
-            : $"{testData.Title} {Guid.NewGuid().ToString("N")[..8]}";
-
-        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
-
-        if (missingField != "Title")
-        {
-            Assert.That(
-                testData.Title,
-                Is.Not.Null.And.Not.Empty,
-                "Other scenarios require a valid title."
-            );
-        }
-
-        if (missingField != "Description")
-        {
-            Assert.That(
-                testData.Description,
-                Is.Not.Null.And.Not.Empty,
-                "Other scenarios require a valid description."
-            );
-        }
+            : $"{data.Title} {Guid.NewGuid().ToString("N")[..8]}";
+        ValidateMissingFieldScenario(data, title, missingField);
 
         var form = new ShareSkillPage(browser);
         var listings = new ManageListingsPage(browser);
-
-        // Capture all existing listing titles, including duplicates.
         listings.Open();
         List<string> titlesBefore = listings.GetAllListingTitles();
 
         if (!string.IsNullOrEmpty(title))
-        {
-            Assert.That(
-                titlesBefore,
-                Does.Not.Contain(title),
-                "The generated title must not already exist."
-            );
-        }
+            Assert.That(titlesBefore, Does.Not.Contain(title),
+                "The generated title must not already exist.");
 
         try
         {
             form.OpenShareSkill();
-
-            form.FillFormWithMissingField(
-                testData,
-                title,
-                missingField
-            );
-
-            // Confirm the intended input is empty before submitting.
-            if (missingField == "Title")
-            {
-                Assert.That(form.GetTitle(), Is.EqualTo(string.Empty));
-            }
-            else if (missingField == "Description")
-            {
-                Assert.That(
-                    form.GetDescription(),
-                    Is.EqualTo(string.Empty)
-                );
-            }
-
-            form.ClickSave();
-
-            Assert.That(
-                form.IsValidationMessageDisplayed(expectedMessage),
-                Is.True,
-                $"Missing {missingField} should display '{expectedMessage}'."
-            );
-
-            // Reading the fields confirms the form remains open.
-            Assert.That(form.GetTitle(), Is.EqualTo(title));
-
-            Assert.That(
-                form.GetDescription(),
-                Is.EqualTo(
-                    missingField == "Description"
-                        ? string.Empty
-                        : testData.Description
-                )
-            );
-
-            form.ClickCancel();
-            form.WaitForFormToClose();
-
-            listings.Open();
-
-            Assert.That(
-                listings.GetAllListingTitles(),
-                Is.EquivalentTo(titlesBefore),
-                "The rejected Save must leave the listing collection unchanged."
-            );
-
-            browser.Navigate().Refresh();
-            listings.Open();
-
-            Assert.That(
-                listings.GetAllListingTitles(),
-                Is.EquivalentTo(titlesBefore),
-                "The listing collection should remain unchanged after refresh."
-            );
+            form.FillFormWithMissingField(data, title, missingField);
+            VerifyMissingFieldRejection(form, data, title, missingField, expectedMessage);
+            VerifyListingCollectionUnchanged(browser, listings, titlesBefore);
         }
         finally
         {
-            // Never delete by an empty title.
             if (!string.IsNullOrEmpty(title))
             {
                 listings.Open();
                 listings.DeleteListingIfExists(title);
             }
         }
+    }
+
+    private static void ValidateMissingFieldScenario(
+        ShareSkillData data,
+        string title,
+        string missingField)
+    {
+        Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+
+        if (missingField != "Title")
+        {
+            Assert.That(data.Title, Is.Not.Null.And.Not.Empty,
+                "Other scenarios require a valid title.");
+        }
+
+        if (missingField != "Description")
+        {
+            Assert.That(data.Description, Is.Not.Null.And.Not.Empty,
+                "Other scenarios require a valid description.");
+        }
+    }
+
+    private static void VerifyMissingFieldRejection(
+        ShareSkillPage form,
+        ShareSkillData data,
+        string title,
+        string missingField,
+        string expectedMessage)
+    {
+        if (missingField == "Title")
+        {
+            Assert.That(form.GetTitle(), Is.EqualTo(string.Empty));
+        }
+        else if (missingField == "Description")
+        {
+            Assert.That(form.GetDescription(), Is.EqualTo(string.Empty));
+        }
+
+        form.ClickSave();
+
+        Assert.That(form.IsValidationMessageDisplayed(expectedMessage), Is.True,
+            $"Missing {missingField} should display '{expectedMessage}'.");
+        Assert.That(form.GetTitle(), Is.EqualTo(title),
+            "The form should remain open with the submitted title.");
+        Assert.That(form.GetDescription(), Is.EqualTo(
+            missingField == "Description" ? string.Empty : data.Description),
+            "The form should retain the submitted description.");
+
+        form.ClickCancel();
+        form.WaitForFormToClose();
+    }
+
+    private static void VerifyListingCollectionUnchanged(
+        IWebDriver browser,
+        ManageListingsPage listings,
+        List<string> titlesBefore)
+    {
+        listings.Open();
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore),
+            "The rejected Save must leave the listing collection unchanged.");
+
+        browser.Navigate().Refresh();
+        listings.Open();
+        Assert.That(listings.GetAllListingTitles(), Is.EquivalentTo(titlesBefore),
+            "The listing collection should remain unchanged after refresh.");
     }
 
 
