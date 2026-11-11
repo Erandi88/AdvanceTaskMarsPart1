@@ -2047,6 +2047,1070 @@ public class SkillTests
         }
     }
 
+    [Test]
+    [NonParallelizable]
+    public void SkillRowsShowEditAndDeleteIcons()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "SkillRowsShowEditAndDeleteIcons.json"
+        );
+
+        var data = JsonReader.Read<List<SkillData>>(filePath);
+        ValidateSkillIconSetup(page, data);
+
+        int countBefore = page.GetSkillRowCount();
+        var attemptedSkills = new List<string>();
+
+        try
+        {
+            foreach (var item in data)
+            {
+                attemptedSkills.Add(item.Skill);
+                page.AddSkill(item.Skill, item.Level);
+
+                Assert.That(
+                    page.IsSkillAndLevelDisplayed(item.Skill, item.Level),
+                    Is.True,
+                    $"Setup should create {item.Skill} with its selected level."
+                );
+            }
+
+            Assert.That(
+                page.WaitForSkillRowCount(countBefore + data.Count),
+                Is.True
+            );
+
+            Assert.That(
+                page.WaitForSkillRowIcons(countBefore + data.Count),
+                Is.True,
+                "Every Skill row should show exactly one Edit and one Delete icon."
+            );
+        }
+        finally
+        {
+            foreach (string skill in attemptedSkills)
+                page.DeleteSkillIfExists(skill);
+        }
+    }
+
+    private static void ValidateSkillIconSetup(SkillPage page, List<SkillData> data)
+    {
+        Assert.That(data, Has.Count.EqualTo(2));
+
+        foreach (var item in data)
+        {
+            Assert.That(item.Skill, Is.Not.Null.And.Not.Empty);
+            Assert.That(item.Level, Is.Not.Null.And.Not.Empty);
+        }
+
+        Assert.That(
+            data.Select(item => item.Skill)
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            Is.EqualTo(2),
+            "The setup requires two different skill names."
+        );
+
+        foreach (var item in data)
+        {
+            Assert.That(
+                page.IsSkillDisplayed(item.Skill),
+                Is.False,
+                $"Preserve existing data: {item.Skill} must be absent before setup."
+            );
+        }
+    }
+
+    //add space only
+    [Test]
+    [NonParallelizable]
+    public void AddSkillRejectsSpacesOnlyName()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "AddSkillWithSpacesOnlyName.json"
+        );
+        var data = JsonReader.Read<SkillData>(filePath);
+
+        Assert.That(data.Skill, Is.EqualTo(new string(' ', 5)));
+        Assert.That(data.Level, Is.EqualTo("Beginner"));
+        Assert.That(page.GetSkillRowCount(), Is.Zero,
+            "This scenario requires an empty Skills table; preserve existing data.");
+        bool addAttempted = false;
+
+        try
+        {
+            page.ClickAddNewButton();
+            page.EnterSkill(data.Skill);
+            page.SelectSkillLevel(data.Level);
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data.Skill),
+                "The input must contain exactly five spaces.");
+
+            addAttempted = true;
+            page.ClickAddAndWaitForResponse();
+
+            Assert.That(page.GetSkillRowCount(), Is.Zero,
+                "Submitting five spaces must not create a blank-looking Skill record.");
+
+            browser.Navigate().Refresh();
+            page.ClickSkillsTab();
+            Assert.That(page.GetSkillRowCount(), Is.Zero,
+                "No Skill record should exist after refresh.");
+        }
+        catch
+        {
+            CaptureSkillFailureBeforeCleanup(browser);
+            throw;
+        }
+        finally
+        {
+            if (addAttempted)
+                page.DeleteOnlyBlankSkillIfExists();
+        }
+    }
+
+    private void CaptureSkillFailureBeforeCleanup(IWebDriver browser, string caption = "Failure state before Skill cleanup")
+    {
+        try
+        {
+            if (browser is ITakesScreenshot screenshotDriver)
+            {
+                string screenshot = screenshotDriver
+                    .GetScreenshot().AsBase64EncodedString;
+
+                reportTest?.AddScreenCaptureFromBase64String(
+                    screenshot,
+                    caption
+                );
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(
+                $"Could not capture the failure screenshot: {exception.Message}"
+            );
+        }
+    }
+
+    //Edit - space only
+    [Test]
+    [NonParallelizable]
+    public void EditSkillRejectsSpacesOnlyName()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "EditSkillWithSpacesOnlyName.json"
+        );
+        var data = JsonReader.Read<EditSkillData>(filePath);
+
+        Assert.That(data.OriginalSkill, Is.EqualTo("Selenium"));
+        Assert.That(data.OriginalLevel, Is.EqualTo("Beginner"));
+        Assert.That(data.UpdatedSkill, Is.EqualTo(new string(' ', 5)));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+        Assert.That(page.GetSkillRowCount(), Is.Zero,
+            "This scenario requires an empty Skills table; preserve existing data.");
+
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data.OriginalSkill, data.OriginalLevel);
+
+            Assert.That(page.IsSkillAndLevelDisplayed(
+                data.OriginalSkill, data.OriginalLevel), Is.True);
+            Assert.That(page.WaitForSkillRowCount(1), Is.True);
+
+            page.ClickEditSkill(data.OriginalSkill);
+            page.EnterSkill(data.UpdatedSkill);
+
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data.UpdatedSkill));
+            Assert.That(page.GetSelectedSkillLevel(), Is.EqualTo(data.UpdatedLevel));
+
+            Console.WriteLine(page.SubmitSkillUpdateAndWaitForResponse());
+            CaptureSkillFailureBeforeCleanup(
+                browser, "Spaces-only Skill Edit before refresh and cleanup");
+            VerifyRejectedSkillNameEdit(browser, page, data);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                browser.Navigate().Refresh();
+                page.ClickSkillsTab();
+                page.DeleteSkillIfExists(data.OriginalSkill);
+                page.DeleteOnlyBlankSkillIfExists();
+            }
+        }
+    }
+
+    private static void VerifyRejectedSkillNameEdit(IWebDriver browser, SkillPage page, EditSkillData data)
+    {
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+
+        bool originalRetained = page.IsSkillAndLevelDisplayed(
+            data.OriginalSkill,
+            data.OriginalLevel
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                originalRetained,
+                Is.True,
+                "The rejected edit must preserve the original Skill and level."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(data.OriginalSkill),
+                Is.EqualTo(1),
+                "Exactly one original Skill record should remain."
+            );
+
+            Assert.That(
+                page.GetSkillRowCount(),
+                Is.EqualTo(1),
+                "The rejected edit must not add or remove records."
+            );
+        });
+    }
+
+    //duplicate edit with different level
+    [Test]
+    [NonParallelizable]
+    public void EditSkillRejectsExistingNameWithDifferentLevel()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill",
+            "EditSkillToExistingNameWithDifferentLevel.json"
+        );
+
+        var data = JsonReader.Read<DuplicateSkillEditData>(filePath);
+        ValidateDifferentLevelSkillSetup(page, data);
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data.ExistingSkill, data.ExistingLevel);
+            
+            Assert.That(page.IsSkillAndLevelDisplayed(
+                data.ExistingSkill, data.ExistingLevel), Is.True);
+           
+            page.AddSkill(data.OriginalSkill, data.OriginalLevel);
+            
+            Assert.That(page.IsSkillAndLevelDisplayed(
+                data.OriginalSkill, data.OriginalLevel), Is.True);
+            Assert.That(page.WaitForSkillRowCount(countBefore + 2), Is.True);
+
+            page.ClickEditSkill(data.OriginalSkill);
+            page.EnterSkill(data.UpdatedSkill);
+            page.SelectSkillLevel(data.UpdatedLevel);
+            
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data.UpdatedSkill));
+            Assert.That(page.GetSelectedSkillLevel(), Is.EqualTo(data.UpdatedLevel));
+            Console.WriteLine(page.SubmitSkillUpdateAndWaitForResponse());
+
+            CaptureSkillFailureBeforeCleanup(
+                browser, "Different-level duplicate Skill Edit before cleanup");
+            VerifyDuplicateSkillEditRejected(browser, page, data, countBefore);
+        }
+        finally
+        {
+            if (creationAttempted)
+                CleanupOwnedSkillNames(browser, page,
+                    data.ExistingSkill, data.OriginalSkill, data.UpdatedSkill);
+        }
+    }
+
+    private static void ValidateDifferentLevelSkillSetup(SkillPage page,DuplicateSkillEditData data)
+    {
+        Assert.That(data.OriginalSkill, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.ExistingSkill, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.OriginalLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.ExistingLevel, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.UpdatedSkill, Is.EqualTo(data.ExistingSkill));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+        Assert.That(data.ExistingLevel, Is.Not.EqualTo(data.UpdatedLevel));
+        Assert.That(
+            string.Equals(data.OriginalSkill, data.ExistingSkill,
+                StringComparison.OrdinalIgnoreCase),
+            Is.False,
+            "Setup requires two different Skill names."
+        );
+
+        foreach (string name in new[]
+        {
+            data.OriginalSkill,
+            data.ExistingSkill
+        })
+        {
+            Assert.That(page.IsSkillDisplayed(name), Is.False,
+                $"Preserve existing data: '{name}' must be absent before setup.");
+        }
+    }
+
+    private static void VerifyDuplicateSkillEditRejected(IWebDriver browser,SkillPage page,
+        DuplicateSkillEditData data,int countBefore)
+    {
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+
+        bool existingRetained = page.IsSkillAndLevelDisplayed(
+            data.ExistingSkill, data.ExistingLevel
+        );
+        bool originalRetained = page.IsSkillAndLevelDisplayed(
+            data.OriginalSkill, data.OriginalLevel
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(existingRetained, Is.True,
+                "The existing Skill and level must remain unchanged.");
+            Assert.That(originalRetained, Is.True,
+                "The rejected edit must preserve the first original record.");
+            Assert.That(page.GetSkillRecordCount(data.ExistingSkill),
+                Is.EqualTo(1),
+                "The existing Skill name must appear exactly once.");
+            Assert.That(page.GetSkillRecordCount(data.OriginalSkill),
+                Is.EqualTo(1));
+            Assert.That(page.GetSkillRecordCount(
+                data.UpdatedSkill, data.UpdatedLevel), Is.Zero,
+                "The attempted duplicate with a different level must not be saved.");
+            Assert.That(page.GetSkillRowCount(), Is.EqualTo(countBefore + 2));
+        });
+    }
+
+    private static void CleanupOwnedSkillNames(IWebDriver browser, SkillPage page, params string[] names)
+    {
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+        page.IsSkillDisplayed(names[0]);
+
+        var failures = new List<Exception>();
+
+        foreach (string name in names.Distinct(StringComparer.Ordinal))
+        {
+            try
+            {
+                page.DeleteOwnedSkillRecords(name);
+            }
+            catch (Exception exception)
+            {
+                failures.Add(new InvalidOperationException(
+                    $"Cleanup failed for Skill '{name}'.", exception
+                ));
+            }
+        }
+
+        if (failures.Count > 0)
+            throw new AggregateException("Skill cleanup failed.", failures);
+    }
+
+    //clicking Update without changing the Skill or level.
+    [Test]
+    [NonParallelizable]
+    public void UpdateSkillWithoutChanges()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "UpdateSkillWithoutChanges.json"
+        );
+        var data = JsonReader.Read<SkillData>(filePath);
+
+        Assert.That(data.Skill, Is.Not.Null.And.Not.Empty);
+        Assert.That(data.Level, Is.Not.Null.And.Not.Empty);
+        Assert.That(page.IsSkillDisplayed(data.Skill), Is.False,
+            "Preserve existing data: the test Skill must be absent.");
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data.Skill, data.Level);
+            Assert.That(page.IsSkillAndLevelDisplayed(
+                data.Skill, data.Level), Is.True);
+            Assert.That(page.WaitForSkillRowCount(countBefore + 1), Is.True);
+
+            page.ClickEditSkill(data.Skill);
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data.Skill));
+            Assert.That(page.GetSelectedSkillLevel(), Is.EqualTo(data.Level));
+
+            string response = page.SubmitSkillUpdateAndWaitForResponse();
+            VerifyUnchangedSkillUpdate(browser, page, data, countBefore, response);
+        }
+        finally
+        {
+            if (creationAttempted)
+                CleanupOwnedSkillNames(browser, page, data.Skill);
+        }
+    }
+
+    //trimming surrounding spaces when adding a Skill
+    [Test]
+    [NonParallelizable]
+    public void AddSkillTrimsSurroundingSpaces()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "AddSkillTrimsSurroundingSpaces.json"
+        );
+        var data = JsonReader.Read<SkillData>(filePath);
+
+        Assert.That(data.Skill, Is.EqualTo("  JMeter  "));
+        Assert.That(data.Level, Is.EqualTo("Beginner"));
+        
+        string expectedName = data.Skill.Trim();
+        
+        Assert.That(page.IsSkillDisplayed(expectedName), Is.False,
+            "Preserve existing data: JMeter must be absent before setup.");
+        
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            page.ClickAddNewButton();
+            page.EnterSkill(data.Skill);
+            page.SelectSkillLevel(data.Level);
+            
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data.Skill),
+                "The submitted Skill must contain two spaces on each side.");
+
+            creationAttempted = true;
+            
+            page.ClickAddAndWaitForResponse();
+            
+            Assert.That(page.WaitForSkillRowCount(countBefore + 1), Is.True);
+            
+            VerifySavedSkillTrimming(
+                browser, page, expectedName, data.Level, countBefore + 1);
+        }
+        catch
+        {
+            CaptureSkillFailureBeforeCleanup(browser);
+            throw;
+        }
+        finally
+        {
+            if (creationAttempted)
+                CleanupOwnedSkillNames(browser, page, expectedName);
+        }
+    }
+
+    private static void VerifySavedSkillTrimming(IWebDriver browser,SkillPage page,
+    string expectedName, string expectedLevel,int expectedRowCount)
+    {
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+
+        Assert.That(
+            page.IsSkillAndLevelDisplayed(expectedName, expectedLevel),
+            Is.True,
+            "The saved Skill and level should appear after refresh."
+        );
+        Assert.That(page.GetSkillRecordCount(expectedName), Is.EqualTo(1));
+        Assert.That(page.GetSkillRowCount(), Is.EqualTo(expectedRowCount));
+
+        page.ClickEditSkill(expectedName);
+        string savedValue = page.GetSkillFieldValue();
+
+        Console.WriteLine(
+            $"Saved Skill: [{savedValue}], length: {savedValue.Length}"
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                savedValue,
+                Is.EqualTo(expectedName),
+                "The saved Skill must not retain leading or trailing spaces."
+            );
+            Assert.That(page.GetSelectedSkillLevel(), Is.EqualTo(expectedLevel));
+        });
+    }
+
+    private void VerifyUnchangedSkillUpdate( IWebDriver browser,SkillPage page,
+    SkillData data,int countBefore,string response)
+    {
+        string[] duplicateMessages =
+        {
+        "This skill is already added to your skill list",
+        "This skill is already exist in your skill list",
+        "Duplicated data"
+    };
+
+        bool duplicateReported = duplicateMessages.Any(message =>
+            response.Contains(message, StringComparison.OrdinalIgnoreCase)
+        );
+
+        Console.WriteLine($"Unchanged Skill Update response: [{response}]");
+
+        if (duplicateReported)
+            CaptureSkillFailureBeforeCleanup(browser);
+
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+
+        bool originalRetained = page.IsSkillAndLevelDisplayed(
+            data.Skill, data.Level
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(originalRetained, Is.True,
+                "The original Skill and level should persist after refresh.");
+            Assert.That(page.GetSkillRecordCount(data.Skill), Is.EqualTo(1),
+                "Updating unchanged values must not create a duplicate.");
+            Assert.That(page.GetSkillRowCount(), Is.EqualTo(countBefore + 1),
+                "Updating unchanged values must preserve the total row count.");
+            Assert.That(duplicateReported, Is.False,
+                "An unchanged Skill must not be incorrectly reported as a duplicate.");
+        });
+    }
+
+    //trimming surrounding spaces during editing
+    [Test]
+    [NonParallelizable]
+    public void EditSkillTrimsSurroundingSpaces()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "EditSkillTrimsSurroundingSpaces.json"
+        );
+        var data = JsonReader.Read<EditSkillData>(filePath);
+
+        Assert.That(data.OriginalSkill, Is.EqualTo("Postman"));
+        Assert.That(data.OriginalLevel, Is.EqualTo("Beginner"));
+        Assert.That(data.UpdatedSkill, Is.EqualTo("  JMeter  "));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+
+        string expectedName = data.UpdatedSkill.Trim();
+
+        Assert.That(page.IsSkillDisplayed(data.OriginalSkill), Is.False,
+            "Preserve existing data: Postman must be absent before setup.");
+        Assert.That(page.IsSkillDisplayed(expectedName), Is.False,
+            "Preserve existing data: JMeter must be absent before setup.");
+
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data.OriginalSkill, data.OriginalLevel);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    data.OriginalSkill, data.OriginalLevel),
+                Is.True
+            );
+            Assert.That(page.WaitForSkillRowCount(countBefore + 1), Is.True);
+
+            page.ClickEditSkill(data.OriginalSkill);
+            page.EnterSkill(data.UpdatedSkill);
+
+            Assert.That(
+                page.GetSkillFieldValue(),
+                Is.EqualTo(data.UpdatedSkill),
+                "The input must contain two spaces on each side."
+            );
+            Assert.That(
+                page.GetSelectedSkillLevel(),
+                Is.EqualTo(data.UpdatedLevel)
+            );
+
+            Console.WriteLine(page.SubmitSkillUpdateAndWaitForResponse());
+
+            // This helper refreshes, checks the saved record, and reopens Edit.
+            VerifySavedSkillTrimming(
+                browser,
+                page,
+                expectedName,
+                data.UpdatedLevel,
+                countBefore + 1
+            );
+
+            // Close Edit before checking the displayed table records.
+            page.ClickCancelButton();
+
+            Assert.That(
+                page.GetSkillRecordCount(data.OriginalSkill),
+                Is.Zero,
+                "The old Skill name should no longer exist after the rename."
+            );
+        }
+        catch
+        {
+            CaptureSkillFailureBeforeCleanup(browser);
+            throw;
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                CleanupOwnedSkillNames(
+                    browser,
+                    page,
+                    expectedName,
+                    data.OriginalSkill
+                );
+            }
+        }
+    }
+
+    //Add numbers and spcial chracters
+    [TestCase(
+        "AddSkillWithNumericOnlyName.json",
+        "34567892",
+        "Beginner",
+        TestName = "AddSkillRejectsNumericOnlyName"
+    )]
+
+    [TestCase(
+        "AddSkillWithSpecialCharactersOnlyName.json",
+        "##@*!@#",
+        "Beginner",
+        TestName = "AddSkillRejectsSpecialCharactersOnlyName"
+    )]
+
+    [NonParallelizable]
+    [Category("RequirementClarification")]
+    public void AddSkillRejectsInvalidName(string jsonFileName, string expectedInput, string expectedLevel)
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException(
+                "Skill page was not created."
+            );
+
+        var browser = driver
+            ?? throw new InvalidOperationException(
+                "Browser was not created."
+            );
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Skill",
+            jsonFileName
+        );
+
+        var data = JsonReader.Read<SkillData>(filePath);
+
+        Assert.That(data.Skill, Is.EqualTo(expectedInput));
+        Assert.That(data.Level, Is.EqualTo(expectedLevel));
+
+        Assert.That(
+            page.IsSkillDisplayed(data.Skill),
+            Is.False,
+            "Preserve existing data: the test Skill must be absent."
+        );
+
+        int countBefore = page.GetSkillRowCount();
+        bool addAttempted = false;
+
+        try
+        {
+            page.ClickAddNewButton();
+            page.EnterSkill(data.Skill);
+            page.SelectSkillLevel(data.Level);
+
+            Assert.That(
+                page.GetSkillFieldValue(),
+                Is.EqualTo(data.Skill),
+                "The submitted input must match the scenario JSON."
+            );
+
+            Assert.That(
+                page.GetSelectedSkillLevel(),
+                Is.EqualTo(data.Level)
+            );
+
+            addAttempted = true;
+            page.ClickAddAndWaitForResponse();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    page.GetSkillRecordCount(data.Skill),
+                    Is.Zero,
+                    "Under the workbook expectation, the invalid Skill name must not be saved."
+                );
+
+                Assert.That(
+                    page.GetSkillRowCount(),
+                    Is.EqualTo(countBefore),
+                    "The rejected attempt must preserve the original row count."
+                );
+            });
+
+            browser.Navigate().Refresh();
+            page.ClickSkillsTab();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    page.GetSkillRecordCount(data.Skill),
+                    Is.Zero,
+                    "The invalid Skill must remain absent after refresh."
+                );
+
+                Assert.That(
+                    page.GetSkillRowCount(),
+                    Is.EqualTo(countBefore),
+                    "The original row count must remain unchanged after refresh."
+                );
+            });
+        }
+        catch
+        {
+            CaptureSkillFailureBeforeCleanup(browser);
+            throw;
+        }
+        finally
+        {
+            if (addAttempted)
+                CleanupOwnedSkillNames(browser, page, data.Skill);
+        }
+    }
+
+    //case-only duplicate Add.
+
+    [Test]
+    [NonParallelizable]
+    [Category("RequirementClarification")]
+    public void AddSkillRejectsCaseOnlyDuplicate()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "AddSkillWithCaseOnlyDuplicate.json"
+        );
+        var data = JsonReader.Read<List<SkillData>>(filePath);
+
+        Assert.That(data, Has.Count.EqualTo(2));
+        Assert.That(data[0].Skill, Is.EqualTo("Selenium"));
+        Assert.That(data[1].Skill, Is.EqualTo("selenium"));
+        Assert.That(data[0].Level, Is.EqualTo("Beginner"));
+        Assert.That(data[1].Level, Is.EqualTo(data[0].Level));
+
+        foreach (var item in data)
+        {
+            Assert.That(
+                page.IsSkillDisplayed(item.Skill),
+                Is.False,
+                $"Preserve existing data: '{item.Skill}' must be absent."
+            );
+        }
+
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data[0].Skill, data[0].Level);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(data[0].Skill, data[0].Level),
+                Is.True
+            );
+            Assert.That(page.WaitForSkillRowCount(countBefore + 1), Is.True);
+
+            page.ClickAddNewButton();
+            page.EnterSkill(data[1].Skill);
+            page.SelectSkillLevel(data[1].Level);
+
+            Assert.That(page.GetSkillFieldValue(), Is.EqualTo(data[1].Skill));
+            Assert.That(page.GetSelectedSkillLevel(), Is.EqualTo(data[1].Level));
+
+            page.ClickAddAndWaitForResponse();
+
+            CaptureSkillFailureBeforeCleanup(
+                browser,
+                "Case-only duplicate Skill Add before refresh and cleanup"
+            );
+
+            VerifyCaseOnlySkillAddRejected(browser, page, data, countBefore);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                CleanupOwnedSkillNames(
+                    browser,
+                    page,
+                    data[0].Skill,
+                    data[1].Skill
+                );
+            }
+        }
+    }
+
+    private static void VerifyCaseOnlySkillAddRejected(IWebDriver browser, SkillPage page,
+    List<SkillData> data, int countBefore)
+    {
+        browser.Navigate().Refresh();
+        page.ClickSkillsTab();
+
+        bool originalRetained = page.IsSkillAndLevelDisplayed(
+            data[0].Skill,
+            data[0].Level
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                originalRetained,
+                Is.True,
+                "The original Selenium record and level must remain unchanged."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(data[0].Skill),
+                Is.EqualTo(1),
+                "Exactly one original Selenium record should remain."
+            );
+
+            Assert.That(
+                page.GetSkillRecordCount(data[1].Skill),
+                Is.Zero,
+                "The lowercase selenium duplicate must not be created."
+            );
+
+            Assert.That(
+                page.GetSkillRowCount(),
+                Is.EqualTo(countBefore + 1),
+                "The duplicate attempt must not increase the row count."
+            );
+        });
+    }
+
+    //case only - duplicate edit
+    [Test]
+    [NonParallelizable]
+    [Category("RequirementClarification")]
+    public void EditSkillRejectsCaseOnlyDuplicate()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData", "Skill", "EditSkillWithCaseOnlyDuplicate.json"
+        );
+        var data = JsonReader.Read<DuplicateSkillEditData>(filePath);
+        ValidateCaseDuplicateSkillSetup(page, data);
+
+        int countBefore = page.GetSkillRowCount();
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+
+            page.AddSkill(data.ExistingSkill, data.ExistingLevel);
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    data.ExistingSkill, data.ExistingLevel),
+                Is.True
+            );
+
+            page.AddSkill(data.OriginalSkill, data.OriginalLevel);
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    data.OriginalSkill, data.OriginalLevel),
+                Is.True
+            );
+            Assert.That(page.WaitForSkillRowCount(countBefore + 2), Is.True);
+
+            page.ClickEditSkill(data.OriginalSkill);
+            page.EnterSkill(data.UpdatedSkill);
+
+            Assert.That(
+                page.GetSkillFieldValue(),
+                Is.EqualTo(data.UpdatedSkill)
+            );
+            Assert.That(
+                page.GetSelectedSkillLevel(),
+                Is.EqualTo(data.UpdatedLevel)
+            );
+
+            Console.WriteLine(page.SubmitSkillUpdateAndWaitForResponse());
+
+            CaptureSkillFailureBeforeCleanup(
+                browser,
+                "Case-only duplicate Skill Edit before refresh and cleanup"
+            );
+
+            VerifyDuplicateSkillEditRejected(browser, page, data, countBefore);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                CleanupOwnedSkillNames(
+                    browser,
+                    page,
+                    data.ExistingSkill,
+                    data.UpdatedSkill,
+                    data.OriginalSkill
+                );
+            }
+        }
+    }
+
+    private static void ValidateCaseDuplicateSkillSetup(SkillPage page,DuplicateSkillEditData data)
+    {
+        Assert.That(data.OriginalSkill, Is.EqualTo("Postman"));
+        Assert.That(data.ExistingSkill, Is.EqualTo("Selenium"));
+        Assert.That(data.UpdatedSkill, Is.EqualTo("selenium"));
+        Assert.That(data.OriginalLevel, Is.EqualTo("Beginner"));
+        Assert.That(data.ExistingLevel, Is.EqualTo(data.OriginalLevel));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+
+        foreach (string name in new[]
+        {
+        data.OriginalSkill,
+        data.ExistingSkill,
+        data.UpdatedSkill
+    })
+        {
+            Assert.That(
+                page.IsSkillDisplayed(name),
+                Is.False,
+                $"Preserve existing data: '{name}' must be absent before setup."
+            );
+        }
+    }
+
+    //Edit - Numbers only
+    [Test]
+    [NonParallelizable]
+    [Category("RequirementClarification")]
+    public void EditSkillRejectsNumbersAndSpecialCharacters()
+    {
+        var page = skillPage
+            ?? throw new InvalidOperationException("Skill page was not created.");
+
+        var browser = driver
+            ?? throw new InvalidOperationException("Browser was not created.");
+
+        string filePath = Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "TestData",
+            "Skill",
+            "EditSkillWithNumbersAndSpecialCharacters.json"
+        );
+
+        var data = JsonReader.Read<EditSkillData>(filePath);
+
+        Assert.That(data.OriginalSkill, Is.EqualTo("Postman"));
+        Assert.That(data.OriginalLevel, Is.EqualTo("Beginner"));
+        Assert.That(data.UpdatedSkill, Is.EqualTo("123@#$"));
+        Assert.That(data.UpdatedLevel, Is.EqualTo(data.OriginalLevel));
+
+        Assert.That(
+            page.GetSkillRowCount(),
+            Is.Zero,
+            "This scenario requires an empty Skills table; preserve existing data."
+        );
+
+        bool creationAttempted = false;
+
+        try
+        {
+            creationAttempted = true;
+            page.AddSkill(data.OriginalSkill, data.OriginalLevel);
+
+            Assert.That(
+                page.IsSkillAndLevelDisplayed(
+                    data.OriginalSkill,
+                    data.OriginalLevel
+                ),
+                Is.True
+            );
+
+            Assert.That(page.WaitForSkillRowCount(1), Is.True);
+
+            page.ClickEditSkill(data.OriginalSkill);
+            page.EnterSkill(data.UpdatedSkill);
+
+            Assert.That(
+                page.GetSkillFieldValue(),
+                Is.EqualTo(data.UpdatedSkill),
+                "The input must match the numbers/special-character scenario."
+            );
+
+            Assert.That(
+                page.GetSelectedSkillLevel(),
+                Is.EqualTo(data.UpdatedLevel)
+            );
+
+            Console.WriteLine(page.SubmitSkillUpdateAndWaitForResponse());
+
+            CaptureSkillFailureBeforeCleanup(
+                browser,
+                "Numbers/special-character Skill Edit before cleanup"
+            );
+
+            VerifyRejectedSkillNameEdit(browser, page, data);
+        }
+        finally
+        {
+            if (creationAttempted)
+            {
+                CleanupOwnedSkillNames(
+                    browser,
+                    page,
+                    data.OriginalSkill,
+                    data.UpdatedSkill
+                );
+            }
+        }
+    }
+
+
     [TearDown]
     public void TearDown()
     {

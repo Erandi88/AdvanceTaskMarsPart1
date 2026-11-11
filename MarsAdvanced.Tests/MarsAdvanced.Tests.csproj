@@ -302,10 +302,25 @@
     <None Update="TestData\Skill\AddSkillPersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Skill\AddSkillTrimsSurroundingSpaces.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\AddSkillWithCaseOnlyDuplicate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddSkillWithEmptyName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Skill\AddSkillWithNumericOnlyName.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\AddSkillWithoutLevel.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\AddSkillWithSpacesOnlyName.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\AddSkillWithSpecialCharactersOnlyName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\Skill\AddSkillWithValidDetails.json">
@@ -335,7 +350,16 @@
     <None Update="TestData\Skill\EditSkillPersistsAfterRefresh.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Skill\EditSkillToExistingNameWithDifferentLevel.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\EditSkillToExistingRecord.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\EditSkillTrimsSurroundingSpaces.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\EditSkillWithCaseOnlyDuplicate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="TestData\Skill\EditSkillWithEmptyLevel.json">
@@ -344,7 +368,19 @@
     <None Update="TestData\Skill\EditSkillWithEmptyName.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TestData\Skill\EditSkillWithNumbersAndSpecialCharacters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\EditSkillWithSpacesOnlyName.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TestData\Skill\EditSkillWithValidDetails.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\SkillRowsShowEditAndDeleteIcons.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\Skill\UpdateSkillWithoutChanges.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

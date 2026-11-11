@@ -408,6 +408,182 @@ namespace MarsAdvanced.Tests.Pages
             }
         }
 
+        public bool WaitForSkillRowIcons(int expectedRows)
+        {
+            var locator = By.XPath(
+                "//div[contains(concat(' ', normalize-space(@class), ' ')," +
+                " ' active ')]//table/tbody/tr"
+            );
+
+            try
+            {
+                return _wait.Until(driver =>
+                {
+                    try
+                    {
+                        var rows = driver.FindElements(locator);
+
+                        return rows.Count == expectedRows &&
+                            rows.All(row =>
+                                row.Displayed &&
+                                row.FindElements(By.CssSelector(
+                                    "td:nth-child(3) span.button > i.write"
+                                )).Count(icon => icon.Displayed) == 1 &&
+                                row.FindElements(By.CssSelector(
+                                    "td:nth-child(3) span.button > i.remove"
+                                )).Count(icon => icon.Displayed) == 1
+                            );
+                    }
+                    catch (StaleElementReferenceException)
+                    {
+                        return false;
+                    }
+                });
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
+        }
+
+
+        public void ClickAddAndWaitForResponse()
+        {
+            var notifications = By.CssSelector(".ns-box");
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                        .All(message => !message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            int countBefore = GetSkillRowCount();
+            ClickAddButton();
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return GetSkillRowCount() > countBefore ||
+                        driver.FindElements(notifications)
+                            .Any(message => message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+        }
+
+        public void DeleteOnlyBlankSkillIfExists()
+        {
+            var locator = By.XPath(
+                "//div[contains(concat(' ', normalize-space(@class), ' ')," +
+                " ' active ')]//table/tbody/tr"
+            );
+
+            var rows = _driver.FindElements(locator);
+
+            if (rows.Count == 0)
+                return;
+
+            if (rows.Count != 1)
+                throw new InvalidOperationException(
+                    "Cleanup expected only the temporary blank Skill row.");
+
+            var cells = rows[0].FindElements(By.TagName("td"));
+
+            if (cells.Count < 2 ||
+                !string.IsNullOrWhiteSpace(cells[0].Text) ||
+                cells[1].Text.Trim() != "Beginner")
+            {
+                throw new InvalidOperationException(
+                    "Cleanup found unexpected data; no record was deleted.");
+            }
+
+            var remove = rows[0].FindElement(By.CssSelector("i.remove"));
+            _wait.Until(_ => remove.Displayed && remove.Enabled);
+            remove.Click();
+
+            _wait.Until(_ => GetSkillRowCount() == 0);
+        }
+
+        //edit space only
+        public string GetSelectedSkillLevel()
+        {
+            var dropdown = _wait.Until(
+                ExpectedConditions.ElementIsVisible(SkillLevelDropdown)
+            );
+
+            return new SelectElement(dropdown).SelectedOption.Text.Trim();
+        }
+
+        public string SubmitSkillUpdateAndWaitForResponse()
+        {
+            var notifications = By.CssSelector(".ns-box");
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                        .All(message => !message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            ClickUpdateButton();
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                               .Any(message => message.Displayed) ||
+                           !driver.FindElements(UpdateButton)
+                               .Any(button => button.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            return string.Join(" ", _driver.FindElements(notifications)
+                .Where(message => message.Displayed)
+                .Select(message => message.Text.Trim()));
+        }
+
+        //duplicate editing with a different level
+        public void DeleteOwnedSkillRecords(string skill)
+        {
+            if (string.IsNullOrWhiteSpace(skill))
+                throw new ArgumentException("A Skill name is required.");
+
+            int count = GetSkillRecordCount(skill);
+
+            while (count > 0)
+            {
+                DeleteSkill(skill);
+
+                _wait.Until(_ =>
+                    GetSkillRecordCount(skill) < count
+                );
+
+                count = GetSkillRecordCount(skill);
+            }
+        }
+
 
     }
 
