@@ -1115,6 +1115,7 @@ public class ShareSkillTests
         }
     }
 
+
     [TestCase(
         "AddShareSkillWith99CharacterTitle.json",
         TestName = "ShareSkill_Accepts99CharacterTitle"

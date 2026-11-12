@@ -60,107 +60,44 @@ namespace MarsAdvanced.Tests
         public void SearchSkillByTitleUsingEnter()
         {
             var browser = driver
-                ?? throw new InvalidOperationException(
-                    "Browser was not created."
-                );
-
+                ?? throw new InvalidOperationException("Browser was not created.");
             string filePath = Path.Combine(
                 TestContext.CurrentContext.TestDirectory,
-                "TestData",
-                "SearchSkill",
-                "SearchSkillByTitleUsingEnter.json"
-            );
+                "TestData", "SearchSkill", "SearchSkillByTitleUsingEnter.json");
+            var data = JsonReader.Read<ShareSkillData>(filePath);
 
-            var testData = JsonReader.Read<ShareSkillData>(filePath);
-
-            Assert.That(testData.Title, Is.Not.Null.And.Not.Empty);
-            Assert.That(
-                testData.Description,
-                Is.Not.Null.And.Not.Empty
-            );
-            Assert.That(testData.ActiveStatus, Is.EqualTo("Active"));
-
-            string suffix = Guid.NewGuid().ToString("N")[..8];
-            string title = $"{testData.Title} {suffix}";
-
+            Assert.That(data.Title, Is.Not.Null.And.Not.Empty);
+            Assert.That(data.Description, Is.Not.Null.And.Not.Empty);
+            Assert.That(data.ActiveStatus, Is.EqualTo("Active"));
+            string title = $"{data.Title} {Guid.NewGuid().ToString("N")[..8]}";
             Assert.That(title.Length, Is.LessThanOrEqualTo(100));
-            Assert.That(
-                testData.Description.Length,
-                Is.LessThanOrEqualTo(600)
-            );
+            Assert.That(data.Description.Length, Is.LessThanOrEqualTo(600));
 
             var form = new ShareSkillPage(browser);
             var listings = new ManageListingsPage(browser);
-            var searchPage = new SearchSkillPage(browser);
-
+            var search = new SearchSkillPage(browser);
             listings.Open();
-
-            Assert.That(
-                listings.FindListingByTitle(title),
-                Is.False,
-                "The generated title must not already exist."
-            );
+            Assert.That(listings.FindListingByTitle(title), Is.False,
+                "The generated title must not already exist.");
 
             bool creationAttempted = false;
-
             try
             {
-                // Arrange: create a unique active listing to search for.
                 form.OpenShareSkill();
-                form.FillForm(testData, title);
-
+                form.FillForm(data, title);
                 creationAttempted = true;
-                form.ClickSave();
-                form.WaitForSaveToComplete();
+                SaveAndVerifyListing(form, listings, title);
 
-                listings.Open();
-
-                Assert.That(
-                    listings.FindListingByTitle(title),
-                    Is.True,
-                    "The listing must exist before searching."
-                );
-
-                Console.WriteLine($"Created test listing: [{title}]");
-
-                // Act: search from Manage Listings using Enter.
-                searchPage.SearchUsingEnter(title);
-
-                // Verify the application submitted the actual keyword.
-                Assert.That(
-                    searchPage.GetSubmittedKeyword(),
-                    Is.EqualTo(title),
-                    "The URL should contain the entered search keyword."
-                );
-
-                Assert.That(
-                    searchPage.WaitForListingTitle(title),
-                    Is.True,
-                    "The created listing should appear in search results."
-                );
-
-                var resultTitles = searchPage.GetVisibleResultTitles();
-
-                Console.WriteLine(
-                    $"Visible result count: {resultTitles.Count}"
-                );
-
-                foreach (string resultTitle in resultTitles)
-                {
-                    Console.WriteLine(
-                        $"Visible result title: [{resultTitle}]"
-                    );
-                }
-
-                Assert.That(
-                    resultTitles,
-                    Is.EquivalentTo(new[] { title }),
-                    "Searching the unique full title should show only that listing."
-                );
+                search.SearchUsingEnter(title);
+                Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(title),
+                    "The URL should contain the entered search keyword.");
+                Assert.That(search.WaitForListingTitle(title), Is.True,
+                    "The created listing should appear in search results.");
+                Assert.That(search.GetVisibleResultTitles(), Is.EquivalentTo(new[] { title }),
+                    "Searching the unique full title should show only that listing.");
             }
             finally
             {
-                // Remove only the listing created by this test.
                 if (creationAttempted)
                 {
                     listings.Open();
@@ -173,262 +110,230 @@ namespace MarsAdvanced.Tests
         public void SearchSkillWithNoMatchingTitle()
         {
             var browser = driver
-                ?? throw new InvalidOperationException(
-                    "Browser was not created."
-                );
+                ?? throw new InvalidOperationException("Browser was not created.");
 
             string filePath = Path.Combine(
                 TestContext.CurrentContext.TestDirectory,
-                "TestData",
-                "SearchSkill",
-                "SearchSkillWithNoMatchingTitle.json"
-            );
+                "TestData", "SearchSkill", "SearchSkillWithNoMatchingTitle.json");
+            var data = JsonReader.Read<SearchSkillData>(filePath);
 
-            var testData = JsonReader.Read<SearchSkillData>(filePath);
-
-            Assert.That(
-                testData.Keyword,
-                Is.Not.Null.And.Not.Empty
-            );
-
-            // Make an accidental match with existing listings unlikely.
-            string keyword =
-                $"{testData.Keyword}{Guid.NewGuid():N}";
+            Assert.That(data.Keyword, Is.Not.Null.And.Not.Empty);
+            string keyword = $"{data.Keyword}{Guid.NewGuid():N}";
 
             var listings = new ManageListingsPage(browser);
-            var searchPage = new SearchSkillPage(browser);
-
-            // Start outside the search page.
+            var search = new SearchSkillPage(browser);
             listings.Open();
 
-            Console.WriteLine($"Unmatched search keyword: [{keyword}]");
+            search.SearchUsingEnter(keyword);
 
-            searchPage.SearchUsingEnter(keyword);
-
-            Assert.That(
-                searchPage.GetSubmittedKeyword(),
-                Is.EqualTo(keyword),
-                "The URL should contain the submitted keyword."
-            );
-
-            Assert.That(
-                searchPage.WaitForNoResults(),
-                Is.True,
-                "An unmatched keyword should show the empty-results message without result cards."
-            );
-
-            Assert.That(
-                searchPage.GetVisibleResultTitles(),
-                Is.Empty,
-                "No listing titles should appear for the unmatched keyword."
-            );
+            Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword),
+                "The URL should contain the submitted keyword.");
+            Assert.That(search.WaitForNoResults(), Is.True,
+                "An unmatched keyword should show the empty-results message without result cards.");
+            Assert.That(search.GetVisibleResultTitles(), Is.Empty,
+                "No listing titles should appear for the unmatched keyword.");
         }
 
 
         [TestCase(
-            "FilterSearchResultsByCategory.json",
-            false,
-            TestName = "FilterSearchResultsByCategory"
-        )]
+            "FilterSearchResultsByCategory.json", false,
+            TestName = "FilterSearchResultsByCategory")]
 
         [TestCase(
-            "FilterSearchResultsBySeleniumSubcategory.json",
-            true,
-            TestName = "FilterSearchResultsBySeleniumSubcategory"
-        )]
+            "FilterSearchResultsBySeleniumSubcategory.json", true,
+            TestName = "FilterSearchResultsBySeleniumSubcategory")]
         public void FilterSearchResults(string jsonFileName, bool filterBySubcategory)
         {
             var browser = driver
-                ?? throw new InvalidOperationException(
-                    "Browser was not created."
-                );
-
+                ?? throw new InvalidOperationException("Browser was not created.");
             string filePath = Path.Combine(
                 TestContext.CurrentContext.TestDirectory,
-                "TestData",
-                "SearchSkill",
-                jsonFileName
-            );
+                "TestData", "SearchSkill", jsonFileName);
+            var data = JsonReader.Read<SearchSkillFilterData>(filePath);
+            ValidateCategoryFilterData(data, filterBySubcategory);
 
-            var testData = JsonReader.Read<SearchSkillFilterData>(filePath);
-
-            Assert.That(testData.Keyword, Is.Not.Null.And.Not.Empty);
-            Assert.That(testData.MatchingListing, Is.Not.Null);
-            Assert.That(testData.NonMatchingListing, Is.Not.Null);
-
-            Assert.Multiple(() =>
+            string keyword = $"{data.Keyword} {Guid.NewGuid().ToString("N")[..8]}";
+            string[] titles =
             {
-                Assert.That(
-                    testData.MatchingListing.Category,
-                    Is.EqualTo("Test Automation")
-                );
-                Assert.That(
-                    testData.MatchingListing.Subcategory,
-                    Is.EqualTo("Selenium")
-                );
-
-                Assert.That(
-                    testData.NonMatchingListing.Category,
-                    Is.EqualTo(
-                        filterBySubcategory
-                            ? "Test Automation"
-                            : "Software Development"
-                    )
-                );
-
-                Assert.That(
-                    testData.NonMatchingListing.Subcategory,
-                    Is.EqualTo(
-                        filterBySubcategory
-                            ? "API Testing"
-                            : "Programming"
-                    )
-                );
-
-                Assert.That(
-                    testData.MatchingListing.ActiveStatus,
-                    Is.EqualTo("Active")
-                );
-                Assert.That(
-                    testData.NonMatchingListing.ActiveStatus,
-                    Is.EqualTo("Active")
-                );
-            });
-
-            // Both listings share a unique search keyword.
-            string suffix = Guid.NewGuid().ToString("N")[..8];
-            string keyword = $"{testData.Keyword} {suffix}";
-
-            string matchingTitle =
-                $"{keyword} {testData.MatchingListing.Title}";
-
-            string nonMatchingTitle =
-                $"{keyword} {testData.NonMatchingListing.Title}";
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(matchingTitle.Length, Is.LessThanOrEqualTo(100));
-                Assert.That(nonMatchingTitle.Length, Is.LessThanOrEqualTo(100));
-                Assert.That(nonMatchingTitle, Is.Not.EqualTo(matchingTitle));
-            });
-
+                $"{keyword} {data.MatchingListing.Title}",
+                $"{keyword} {data.NonMatchingListing.Title}"
+            };
             var form = new ShareSkillPage(browser);
             var listings = new ManageListingsPage(browser);
-            var searchPage = new SearchSkillPage(browser);
-
-            listings.Open();
-
-            Assert.That(
-                listings.FindListingByTitle(matchingTitle),
-                Is.False
-            );
-            Assert.That(
-                listings.FindListingByTitle(nonMatchingTitle),
-                Is.False
-            );
-
-            bool matchingCreationAttempted = false;
-            bool nonMatchingCreationAttempted = false;
+            var search = new SearchSkillPage(browser);
+            var attemptedTitles = new List<string>();
 
             try
             {
-                // Arrange: create both listings using the same helper.
-                form.OpenShareSkill();
-                form.FillForm(testData.MatchingListing, matchingTitle);
-
-                matchingCreationAttempted = true;
-                SaveAndVerifyListing(form, listings, matchingTitle);
-
-                form.OpenShareSkill();
-                form.FillForm(testData.NonMatchingListing, nonMatchingTitle);
-
-                nonMatchingCreationAttempted = true;
-                SaveAndVerifyListing(form, listings, nonMatchingTitle);
-
-                searchPage.SearchUsingEnter(keyword);
-
-                Assert.That(
-                    searchPage.GetSubmittedKeyword(),
-                    Is.EqualTo(keyword)
-                );
-
-                Assert.That(
-                    searchPage.WaitForResultTitles(
-                        matchingTitle,
-                        nonMatchingTitle
-                    ),
-                    Is.True,
-                    "Both listings should appear before filtering."
-                );
-
-                // Both scenarios begin by selecting Test Automation.
-                searchPage.SelectTestAutomationCategory();
-
-                if (filterBySubcategory)
-                {
-                    // Both belong to this category, so both should remain.
-                    Assert.That(
-                        searchPage.WaitForResultTitles(
-                            matchingTitle,
-                            nonMatchingTitle
-                        ),
-                        Is.True,
-                        "Both Test Automation listings should remain."
-                    );
-
-                    searchPage.SelectSeleniumSubcategory();
-                }
-
-                // Either filter should leave only the matching listing.
-                Assert.That(
-                    searchPage.WaitForResultTitles(matchingTitle),
-                    Is.True,
-                    "Filtering should retain only the matching listing."
-                );
-
-                Assert.Multiple(() =>
-                {
-                    Assert.That(
-                        searchPage.GetQueryParameter("cat"),
-                        Is.EqualTo("TestAutomation")
-                    );
-
-                    Assert.That(
-                        searchPage.GetQueryParameter("subcat"),
-                        Is.EqualTo(filterBySubcategory ? "1" : string.Empty)
-                    );
-
-                    Assert.That(
-                        searchPage.GetVisibleResultTitles(),
-                        Is.EquivalentTo(new[] { matchingTitle }),
-                        "The nonmatching listing should be excluded."
-                    );
-                });
-
-                Console.WriteLine($"Scenario data: {jsonFileName}");
-                Console.WriteLine($"Included: [{matchingTitle}]");
-                Console.WriteLine($"Excluded: [{nonMatchingTitle}]");
+                CreateSearchFilterListings(form, listings,
+                    new[] { data.MatchingListing, data.NonMatchingListing },
+                    titles, attemptedTitles);
+                VerifyCategorySearchFilter(search, keyword, titles, filterBySubcategory);
             }
             finally
             {
-                // Attempt both cleanups even if the first one fails.
-                try
-                {
-                    if (matchingCreationAttempted)
-                    {
-                        listings.Open();
-                        listings.DeleteListingIfExists(matchingTitle);
-                    }
-                }
-                finally
-                {
-                    if (nonMatchingCreationAttempted)
-                    {
-                        listings.Open();
-                        listings.DeleteListingIfExists(nonMatchingTitle);
-                    }
-                }
+                listings.Open();
+                RemoveSearchListings(listings, attemptedTitles);
             }
+        }
+
+        [Test]
+        public void FilterSearchResultsByLocation()
+        {
+            var browser = driver
+                ?? throw new InvalidOperationException("Browser was not created.");
+            string filePath = Path.Combine(
+                TestContext.CurrentContext.TestDirectory,
+                "TestData", "SearchSkill", "FilterSearchResultsByLocation.json");
+            var data = JsonReader.Read<SearchSkillFilterData>(filePath);
+            ValidateLocationFilterData(data);
+
+            string keyword = $"{data.Keyword} {Guid.NewGuid().ToString("N")[..8]}";
+            string[] titles =
+            {
+                $"{keyword} {data.MatchingListing.Title}",
+                $"{keyword} {data.NonMatchingListing.Title}"
+            };
+            var form = new ShareSkillPage(browser);
+            var listings = new ManageListingsPage(browser);
+            var search = new SearchSkillPage(browser);
+            var attemptedTitles = new List<string>();
+
+            try
+            {
+                CreateSearchFilterListings(form, listings,
+                    new[] { data.MatchingListing, data.NonMatchingListing },
+                    titles, attemptedTitles);
+                VerifyLocationSearchFilters(search, keyword, titles);
+            }
+            finally
+            {
+                listings.Open();
+                RemoveSearchListings(listings, attemptedTitles);
+            }
+        }
+
+        private static void ValidateCategoryFilterData(
+            SearchSkillFilterData data,
+            bool filterBySubcategory)
+        {
+            Assert.That(data.Keyword, Is.Not.Null.And.Not.Empty);
+            Assert.That(data.MatchingListing, Is.Not.Null);
+            Assert.That(data.NonMatchingListing, Is.Not.Null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(data.MatchingListing.Category, Is.EqualTo("Test Automation"));
+                Assert.That(data.MatchingListing.Subcategory, Is.EqualTo("Selenium"));
+                Assert.That(data.NonMatchingListing.Category,
+                    Is.EqualTo(filterBySubcategory
+                        ? "Test Automation" : "Software Development"));
+                Assert.That(data.NonMatchingListing.Subcategory,
+                    Is.EqualTo(filterBySubcategory ? "API Testing" : "Programming"));
+                Assert.That(data.MatchingListing.ActiveStatus, Is.EqualTo("Active"));
+                Assert.That(data.NonMatchingListing.ActiveStatus, Is.EqualTo("Active"));
+            });
+        }
+
+        private static void ValidateLocationFilterData(SearchSkillFilterData data)
+        {
+            Assert.That(data.Keyword, Is.Not.Null.And.Not.Empty);
+            Assert.That(data.MatchingListing, Is.Not.Null);
+            Assert.That(data.NonMatchingListing, Is.Not.Null);
+
+            var online = data.MatchingListing;
+            var onsite = data.NonMatchingListing;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(online.LocationType, Is.EqualTo("Online"));
+                Assert.That(onsite.LocationType, Is.EqualTo("On-site"));
+                Assert.That(online.ActiveStatus, Is.EqualTo("Active"));
+                Assert.That(onsite.ActiveStatus, Is.EqualTo("Active"));
+                Assert.That(online.Category, Is.EqualTo(onsite.Category));
+                Assert.That(online.Subcategory, Is.EqualTo(onsite.Subcategory));
+            });
+        }
+
+        private void CreateSearchFilterListings(
+            ShareSkillPage form, ManageListingsPage listings,
+            ShareSkillData[] data, string[] titles, List<string> attemptedTitles)
+        {
+            Assert.That(data.Length, Is.EqualTo(2));
+            Assert.That(titles.Length, Is.EqualTo(2));
+            Assert.That(titles[1], Is.Not.EqualTo(titles[0]));
+
+            listings.Open();
+            foreach (string title in titles)
+            {
+                Assert.That(title.Length, Is.LessThanOrEqualTo(100));
+                Assert.That(listings.FindListingByTitle(title), Is.False,
+                    "The generated test title must not already exist.");
+            }
+
+            for (int index = 0; index < data.Length; index++)
+            {
+                form.OpenShareSkill();
+                form.FillForm(data[index], titles[index]);
+                attemptedTitles.Add(titles[index]);
+                SaveAndVerifyListing(form, listings, titles[index]);
+            }
+        }
+
+        private static void VerifyCategorySearchFilter(
+            SearchSkillPage search, string keyword, string[] titles, bool filterBySubcategory)
+        {
+            search.SearchUsingEnter(keyword);
+            Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword));
+            Assert.That(search.WaitForResultTitles(titles), Is.True,
+                "Both listings should appear before filtering.");
+
+            search.SelectTestAutomationCategory();
+            if (filterBySubcategory)
+            {
+                Assert.That(search.WaitForResultTitles(titles), Is.True,
+                    "Both Test Automation listings should remain.");
+                search.SelectSeleniumSubcategory();
+            }
+
+            Assert.That(search.WaitForResultTitles(titles[0]), Is.True,
+                "Filtering should retain only the matching listing.");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(search.GetQueryParameter("cat"), Is.EqualTo("TestAutomation"));
+                Assert.That(search.GetQueryParameter("subcat"),
+                    Is.EqualTo(filterBySubcategory ? "1" : string.Empty));
+                Assert.That(search.GetVisibleResultTitles(),
+                    Is.EquivalentTo(new[] { titles[0] }),
+                    "The nonmatching listing should be excluded.");
+            });
+        }
+
+        private static void VerifyLocationSearchFilters(
+            SearchSkillPage search,string keyword,string[] titles)
+        {
+            search.SearchUsingEnter(keyword);
+            Assert.That(search.GetSubmittedKeyword(), Is.EqualTo(keyword));
+            Assert.That(search.WaitForResultTitles(titles), Is.True,
+                "Both listings should appear before location filtering.");
+
+            search.SelectLocationFilter("Online");
+            Assert.That(search.WaitForResultTitles(titles[0]), Is.True,
+                "Online should show only the Online test listing.");
+            Assert.That(search.GetVisibleResultTitles(),
+                Is.EquivalentTo(new[] { titles[0] }));
+
+            search.SelectLocationFilter("Onsite");
+            Assert.That(search.WaitForResultTitles(titles[1]), Is.True,
+                "Onsite should show only the On-site test listing.");
+            Assert.That(search.GetVisibleResultTitles(),
+                Is.EquivalentTo(new[] { titles[1] }));
+
+            search.SelectLocationFilter("ShowAll");
+            Assert.That(search.WaitForResultTitles(titles), Is.True,
+                "ShowAll should restore both test listings.");
+            Assert.That(search.GetVisibleResultTitles(), Is.EquivalentTo(titles));
         }
 
         //Helper
@@ -447,7 +352,7 @@ namespace MarsAdvanced.Tests
             );
         }
 
-        [Test]
+        /*[Test]
         public void FilterSearchResultsByLocation()
         {
             var browser = driver
@@ -611,7 +516,7 @@ namespace MarsAdvanced.Tests
                     }
                 }
             }
-        }
+        }*/
 
         [Test]
         public void OpenSearchResultShowsCorrectListing()
@@ -624,8 +529,13 @@ namespace MarsAdvanced.Tests
                 "TestData", "SearchSkill",
                 "OpenSearchResultShowsCorrectListing.json"
             );
+
             var data = JsonReader.Read<ShareSkillData>(filePath);
             string title = $"{data.Title} {Guid.NewGuid():N}";
+            
+            Assert.That(title.Length, Is.LessThanOrEqualTo(100),
+                    "The generated title must fit the input limit.");
+            
             var form = new ShareSkillPage(browser);
             var listings = new ManageListingsPage(browser);
             var search = new SearchSkillPage(browser);
@@ -707,6 +617,10 @@ namespace MarsAdvanced.Tests
                 foreach (var item in data)
                 {
                     string title = $"{keyword} {item.Title}";
+                    
+                    Assert.That(title.Length, Is.LessThanOrEqualTo(100),
+                            "The generated title must fit the input limit.");
+                    
                     form.OpenShareSkill();
                     form.FillForm(item, title);
                     attemptedTitles.Add(title);
@@ -718,8 +632,7 @@ namespace MarsAdvanced.Tests
             finally
             {
                 listings.Open();
-                foreach (string title in attemptedTitles)
-                    listings.DeleteListingIfExists(title);
+                RemoveSearchListings(listings, attemptedTitles);
             }
         }
 
@@ -916,7 +829,7 @@ namespace MarsAdvanced.Tests
             finally
             {
                 listings.Open();
-                RemovePaginationListings(listings, attemptedTitles);
+                RemoveSearchListings(listings, attemptedTitles);
             }
         }
 
@@ -975,7 +888,7 @@ namespace MarsAdvanced.Tests
         }
 
         //helper - cleanup
-        private static void RemovePaginationListings( ManageListingsPage listings,List<string> attemptedTitles)
+        private static void RemoveSearchListings( ManageListingsPage listings,List<string> attemptedTitles)
         {
             var failures = new List<Exception>();
 
@@ -997,7 +910,7 @@ namespace MarsAdvanced.Tests
             if (failures.Count > 0)
             {
                 throw new AggregateException(
-                    "Some pagination test listings could not be removed.",
+                    "Some search test listings could not be removed.",
                     failures
                 );
             }
