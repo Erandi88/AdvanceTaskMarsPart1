@@ -1,0 +1,27 @@
+{
+  "keyword": "QA Category",
+  "matchingListing": {
+    "title": "Selenium Service",
+    "description": "I provide Selenium browser automation practice.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  "nonMatchingListing": {
+    "title": "Programming Service",
+    "description": "I provide programming practice covering methods and classes.",
+    "category": "Software Development",
+    "subcategory": "Programming",
+    "tags": [ "Programming" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "Selenium" ],
+    "activeStatus": "Active"
+  }
+}

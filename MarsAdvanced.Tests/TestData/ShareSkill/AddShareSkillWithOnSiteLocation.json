@@ -1,0 +1,12 @@
+{
+  "title": "QA On Site Service",
+  "description": "This listing is used to verify the cancel action",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "One-off service",
+  "locationType": "On-site",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

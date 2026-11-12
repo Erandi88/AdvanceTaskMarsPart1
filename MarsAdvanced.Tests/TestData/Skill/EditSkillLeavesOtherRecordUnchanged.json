@@ -1,0 +1,12 @@
+{
+  "recordToEdit": {
+    "originalSkill": "Selenium",
+    "originalLevel": "Intermediate",
+    "updatedSkill": "API Testing",
+    "updatedLevel": "Expert"
+  },
+  "otherRecord": {
+    "skill": "SQL",
+    "level": "Beginner"
+  }
+}

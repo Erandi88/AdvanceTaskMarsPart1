@@ -1,0 +1,16 @@
+{
+  "listingCount": 12,
+  "pageSize": 12,
+  "listing": {
+    "title": "QA Pagination",
+    "description": "Selenium practice for search pagination testing.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  }
+}

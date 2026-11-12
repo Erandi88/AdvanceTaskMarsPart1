@@ -1,0 +1,13 @@
+{
+  "title": "QA Description Validation",
+  "description": "Selenium # and @ testing",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active",
+  "expectedMessage": "Special characters are not allowed."
+}

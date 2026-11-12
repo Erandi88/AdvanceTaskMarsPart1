@@ -1,0 +1,14 @@
+{
+  "title": "QA Boundary",
+  "inputTitleLength": 101,
+  "expectedTitleLength": 100,
+  "description": "Selenium practice for title boundary testing.",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

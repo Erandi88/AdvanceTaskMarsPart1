@@ -69,7 +69,7 @@ namespace MarsAdvanced.Tests.Pages
                 var languageRow = By.XPath($"//td[normalize-space()='{language}']");
                 return _wait.Until(ExpectedConditions.ElementIsVisible(languageRow)).Displayed;
             }
-            catch
+            catch (WebDriverTimeoutException)
             {
                 return false;
             }
@@ -118,8 +118,8 @@ namespace MarsAdvanced.Tests.Pages
                 _wait.Until(ExpectedConditions.InvisibilityOfElementLocated(languageRow));
                 return true;
             }
-            catch
-            {
+            catch(WebDriverTimeoutException)
+{
                 return false;
             }
         }
@@ -357,6 +357,188 @@ namespace MarsAdvanced.Tests.Pages
             return buttons.Any(button =>
                 button.Displayed && button.Enabled
             );
+        }
+
+        public void DeleteOnlyBlankLanguageIfExists()
+        {
+            var rowsLocator = By.XPath(
+                "//div[contains(concat(' ', normalize-space(@class), ' ')," +
+                " ' active ')]//table/tbody/tr"
+            );
+
+            var rows = _driver.FindElements(rowsLocator);
+
+            if (rows.Count == 0)
+                return;
+
+            if (rows.Count != 1)
+            {
+                throw new InvalidOperationException(
+                    "Cleanup expected only the temporary blank language row."
+                );
+            }
+
+            var cells = rows[0].FindElements(By.TagName("td"));
+
+            if (cells.Count < 2 ||
+                !string.IsNullOrWhiteSpace(cells[0].Text) ||
+                cells[1].Text.Trim() != "Basic")
+            {
+                throw new InvalidOperationException(
+                    "Cleanup found unexpected data; no record was deleted."
+                );
+            }
+
+            var remove = rows[0].FindElement(By.CssSelector("i.remove"));
+            _wait.Until(_ => remove.Displayed && remove.Enabled);
+            remove.Click();
+
+            _wait.Until(_ => GetLanguageRowCount() == 0);
+        }
+
+        public void ClickAddAndWaitForResponse()
+        {
+            var notifications = By.CssSelector(".ns-box");
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                        .All(message => !message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            int countBefore = GetLanguageRowCount();
+            ClickAddButton();
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return GetLanguageRowCount() > countBefore ||
+                        driver.FindElements(notifications)
+                            .Any(message => message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+        }
+
+        //row edit and delete icon 
+        public bool WaitForLanguageRowIcons(int expectedRows)
+        {
+            var locator = By.XPath(
+                "//div[contains(concat(' ', normalize-space(@class), ' ')," +
+                " ' active ')]//table/tbody/tr"
+            );
+
+            try
+            {
+                return _wait.Until(driver =>
+                {
+                    try
+                    {
+                        var rows = driver.FindElements(locator);
+
+                        return rows.Count == expectedRows &&
+                            rows.All(row =>
+                                row.Displayed &&
+                                row.FindElements(By.CssSelector(
+                                    "td:nth-child(3) span.button > i.write"
+                                )).Count(icon => icon.Displayed) == 1 &&
+                                row.FindElements(By.CssSelector(
+                                    "td:nth-child(3) span.button > i.remove"
+                                )).Count(icon => icon.Displayed) == 1
+                            );
+                    }
+                    catch (StaleElementReferenceException)
+                    {
+                        return false;
+                    }
+                });
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
+        }
+
+        public bool IsLanguageAddFormVisible()
+        {
+            return _driver.FindElements(AddButton)
+                .Any(button => button.Displayed);
+        }
+
+        public string GetSelectedLanguageLevel()
+        {
+            var dropdown = _wait.Until(
+                ExpectedConditions.ElementIsVisible(LanguageLevelDropdown)
+            );
+
+            return new SelectElement(dropdown).SelectedOption.Text.Trim();
+        }
+
+        public string SubmitLanguageUpdateAndWaitForResponse()
+        {
+            var notifications = By.CssSelector(".ns-box");
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                        .All(message => !message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            ClickUpdateButton();
+
+            _wait.Until(driver =>
+            {
+                try
+                {
+                    return driver.FindElements(notifications)
+                     .Any(message => message.Displayed);
+                }
+                catch (StaleElementReferenceException)
+                {
+                    return false;
+                }
+            });
+
+            return string.Join(" ", _driver.FindElements(notifications)
+                .Where(message => message.Displayed)
+                .Select(message => message.Text.Trim()));
+        }
+
+        public void DeleteOwnedLanguageRecords(string language)
+        {
+            if (string.IsNullOrWhiteSpace(language))
+                throw new ArgumentException("A language name is required.");
+
+            int count = GetLanguageRecordCount(language);
+
+            while (count > 0)
+            {
+                DeleteLanguage(language);
+
+                _wait.Until(_ =>
+                    GetLanguageRecordCount(language) < count
+                );
+
+                count = GetLanguageRecordCount(language);
+            }
         }
 
     }

@@ -1,0 +1,12 @@
+{
+  "title": "",
+  "description": "This listing checks validation when the title is empty",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

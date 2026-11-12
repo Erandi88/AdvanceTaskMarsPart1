@@ -1,0 +1,12 @@
+{
+  "title": "QA Empty Category",
+  "description": "Selenium practice for testing empty search results.",
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

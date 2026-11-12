@@ -1,0 +1,16 @@
+{
+  "original": {
+    "title": "QA Original Listing",
+    "description": "I provide Selenium practice covering browser navigation and basic automated tests.",
+    "category": "Test Automation",
+    "subcategory": "Selenium",
+    "tags": [ "Selenium" ],
+    "serviceType": "Hourly basis service",
+    "locationType": "Online",
+    "skillTrade": "Skill-exchange",
+    "skillExchangeTags": [ "API Testing" ],
+    "activeStatus": "Active"
+  },
+  "updatedTitle": "QA Updated Listing",
+  "updatedDescription": "I provide Selenium practice covering explicit waits and reliable automated tests."
+}

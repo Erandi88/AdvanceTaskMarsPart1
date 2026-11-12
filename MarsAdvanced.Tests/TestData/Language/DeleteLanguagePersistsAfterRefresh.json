@@ -1,0 +1,10 @@
+{
+  "recordToDelete": {
+    "language": "Italian",
+    "level": "Basic"
+  },
+  "otherRecord": {
+    "language": "German",
+    "level": "Conversational"
+  }
+}

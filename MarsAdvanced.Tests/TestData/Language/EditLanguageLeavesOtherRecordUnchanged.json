@@ -1,0 +1,12 @@
+{
+  "recordToEdit": {
+    "originalLanguage": "Italian",
+    "originalLevel": "Basic",
+    "updatedLanguage": "Spanish",
+    "updatedLevel": "Fluent"
+  },
+  "otherRecord": {
+    "language": "German",
+    "level": "Conversational"
+  }
+}

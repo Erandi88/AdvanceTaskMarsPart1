@@ -1,0 +1,14 @@
+{
+  "title": "QA Description Boundary",
+  "description": "Selenium browser automation practice ",
+  "inputDescriptionLength": 599,
+  "expectedDescriptionLength": 599,
+  "category": "Test Automation",
+  "subcategory": "Selenium",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}

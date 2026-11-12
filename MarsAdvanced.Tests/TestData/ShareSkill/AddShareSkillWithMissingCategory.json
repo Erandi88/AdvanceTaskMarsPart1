@@ -1,0 +1,12 @@
+{
+  "title": "QA Missing Category",
+  "description": "This listing checks validation when no category is selected",
+  "category": "",
+  "subcategory": "",
+  "tags": [ "Selenium" ],
+  "serviceType": "Hourly basis service",
+  "locationType": "Online",
+  "skillTrade": "Skill-exchange",
+  "skillExchangeTags": [ "API Testing" ],
+  "activeStatus": "Active"
+}
